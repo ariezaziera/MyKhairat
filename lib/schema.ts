@@ -37,6 +37,9 @@ export const users = sqliteTable("users", {
   familyId: text("family_id"),
   phone: text("phone"),
   active: integer("active").notNull().default(1),
+  username: text("username").unique(),
+  mustChangePassword: integer("must_change_password").notNull().default(0),
+  sessionVersion: integer("session_version").notNull().default(0),
   createdAt: text("created_at").notNull(),
 });
 

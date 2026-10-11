@@ -19,6 +19,7 @@ export default async function FamilyDetailPage({ params }: { params: Promise<{ i
         <div>
           <h1 className="text-3xl font-semibold">{bundle.family.familyId}</h1>
           <p className="text-slate-500">{bundle.family.wakilName}</p>
+          <p className="text-sm font-semibold text-brand-blue">Username: {bundle.family.username ?? "Belum dijana"}</p>
         </div>
         <StatusPill status={bundle.family.familyStatus} />
       </div>

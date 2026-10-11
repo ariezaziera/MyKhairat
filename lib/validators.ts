@@ -7,7 +7,7 @@ const calendarDate = z.string().regex(/^(19|20)\d{2}-(0[1-9]|1[0-2])-\d{2}$/).re
 }, "Use a valid calendar date");
 
 export const loginSchema = z.object({
-  email: z.string().trim().email("Enter a valid email"),
+  email: z.string().trim().min(1, "Masukkan username atau email"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -25,8 +25,8 @@ export const settingsSchema = z.object({
 export const familyCreateSchema = z.object({
   wakilName: z.string().trim().min(2).max(120),
   wakilPhone: z.string().trim().min(8).max(20),
-  email: z.string().trim().email(),
-  password: z.string().min(6).max(80),
+  email: z.union([z.string().trim().email(), z.literal("")]).optional(),
+  password: z.string().optional(),
   familyStatus: z.enum(["Active", "Suspended", "Inactive"]),
   joinedMonth: month,
   openingBalance: z.coerce.number(),
@@ -92,6 +92,7 @@ export const accountUpdateSchema = z.object({
   password: z.union([z.string().min(6).max(80), z.literal("")]).optional(),
   phone: z.string().trim().max(20).optional(),
   active: z.boolean().optional(),
+  resetDefault: z.boolean().optional(),
 });
 
 export const manualPaymentSchema = z.object({

@@ -6,6 +6,7 @@ import { migrateLegacySettings } from "./migrate-settings";
 import * as schema from "./schema";
 import { settings } from "./schema";
 import { nowIso } from "./format";
+import { uniqueUsername } from "./usernames";
 
 const globalForDb = globalThis as unknown as { client?: Client; db?: LibSQLDatabase<typeof schema> };
 
@@ -48,6 +49,15 @@ export function ensureSchema() {
       await addColumn(client, "settings", "duitnow_content_type", "TEXT");
       await addColumn(client, "settings", "duitnow_qr", "TEXT");
       await addColumn(client, "users", "active", "INTEGER NOT NULL DEFAULT 1");
+      await addColumn(client, "users", "username", "TEXT");
+      await addColumn(client, "users", "must_change_password", "INTEGER NOT NULL DEFAULT 0");
+      await addColumn(client, "users", "session_version", "INTEGER NOT NULL DEFAULT 0");
+      await client.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username COLLATE NOCASE)");
+      const accounts = await client.execute("SELECT id, name, username FROM users ORDER BY created_at, id");
+      const occupied = new Set(accounts.rows.filter((row) => row.username).map((row) => String(row.username).toLowerCase()));
+      for (const row of accounts.rows) {
+        if (!row.username) await client.execute({ sql: "UPDATE users SET username = ? WHERE id = ? AND username IS NULL", args: [uniqueUsername(String(row.name), occupied), row.id] });
+      }
       await addColumn(client, "payments", "entry_note", "TEXT");
       await addColumn(client, "settings", "death_payout_amount", "REAL NOT NULL DEFAULT 2000");
       await addColumn(client, "settings", "warded_payout_amount", "REAL NOT NULL DEFAULT 200");

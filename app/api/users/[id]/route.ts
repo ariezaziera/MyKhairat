@@ -15,10 +15,12 @@ export async function PATCH(request: Request, context: Context) {
       password: parsed.data.password || undefined,
       phone: parsed.data.phone,
       active: parsed.data.active,
+      resetDefault: parsed.data.resetDefault,
     });
     const parts = [
       parsed.data.name ? `renamed to ${parsed.data.name}` : "",
       parsed.data.password ? "password reset" : "",
+      parsed.data.resetDefault ? "reset to default; password change required" : "",
       parsed.data.active === true ? "enabled" : "",
       parsed.data.active === false ? "disabled" : "",
     ].filter(Boolean);

@@ -14,6 +14,7 @@ export default async function DirectoryPage({ searchParams }: { searchParams: Pr
           <h1 className="text-3xl font-semibold">Master Directory</h1>
           <p className="text-sm text-slate-500">{families.length} families</p>
         </div>
+        <Link href="/admin/families/import" className="rounded-2xl border border-brand-blue px-4 py-3 text-sm font-semibold text-brand-blue">Import Excel</Link>
         <Link href="/admin/families/new" className="rounded-2xl bg-brand-blue px-4 py-3 text-sm font-semibold text-white">
           Add family
         </Link>

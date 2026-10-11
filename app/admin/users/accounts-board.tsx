@@ -2,11 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { PasswordInput } from "@/components/password-input";
 import { Button, Card } from "@/components/ui";
 
 export type AccountRow = {
   id: string;
   email: string;
+  username: string | null;
+  mustChangePassword: boolean;
   name: string;
   role: string;
   familyId: string | null;
@@ -88,7 +91,7 @@ export function AccountsBoard({ accounts, currentUserId }: { accounts: AccountRo
           </div>
           <div>
             <label htmlFor="password">Temporary password</label>
-            <input id="password" name="password" type="password" required minLength={6} />
+            <PasswordInput id="password" name="password" type="password" required minLength={6} />
           </div>
           <Button type="submit" className="sm:col-span-2 sm:w-fit" disabled={pending}>
             {pending ? "Creating..." : "Create admin"}
@@ -101,7 +104,9 @@ export function AccountsBoard({ accounts, currentUserId }: { accounts: AccountRo
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-semibold">{account.name}</p>
-                <p className="text-sm text-slate-500">{account.email}</p>
+                <p className="text-sm font-semibold text-brand-blue">Username: {account.username ?? account.email}</p>
+                {account.mustChangePassword && <p className="text-xs text-amber-700">Wajib tukar password pada login berikutnya</p>}
+                {!account.email.endsWith("@wakil.invalid") && <p className="text-sm text-slate-500">{account.email}</p>}
                 <p className="mt-1 text-xs uppercase tracking-wide text-slate-400">
                   {account.role === "admin" ? "AJK admin" : `Wakil · ${account.familyId}`}
                   {account.familyLabel ? ` · ${account.familyLabel}` : ""}
@@ -127,11 +132,12 @@ export function AccountsBoard({ accounts, currentUserId }: { accounts: AccountRo
               }}
             >
               <input name="name" defaultValue={account.name} required minLength={2} aria-label="Name" />
-              <input name="password" type="password" minLength={6} placeholder="New password" aria-label="New password" />
+              {account.role === "admin" && <PasswordInput name="password" minLength={6} placeholder="New password" aria-label="New password" />}
               <Button type="submit" variant="ghost" className="sm:col-span-2 sm:w-fit">
-                Save name or password
+                {account.role === "admin" ? "Save name or password" : "Simpan nama"}
               </Button>
             </form>
+            {account.role === "wakil" && <Button type="button" variant="ghost" onClick={() => { if (confirm(`Reset password ${account.name} kepada mykhairat?`)) void patch(account.id, { resetDefault: true }, "Password direset kepada mykhairat. Wakil wajib tukar selepas login."); }}>Reset password ke mykhairat</Button>}
             {account.id === currentUserId ? (
               <p className="text-xs text-slate-500">This is your login. Another admin must disable it.</p>
             ) : (

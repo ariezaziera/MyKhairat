@@ -23,13 +23,15 @@ export function errorResponse(error: unknown) {
   return json({ error: "Something went wrong." }, 500);
 }
 
-export async function requireSession(): Promise<Session> {
+export async function requireSession(allowPasswordChange = false): Promise<Session> {
   const session = await getSession();
   if (!session) throw new AppError("Please sign in.", 401);
   await ensureSchema();
-  const rows = await getDb().select({ active: users.active }).from(users).where(eq(users.id, session.sub));
+  const rows = await getDb().select().from(users).where(eq(users.id, session.sub));
   if (!rows[0] || rows[0].active === 0) throw new AppError("This login has been disabled.", 401);
-  return session;
+  if (rows[0].sessionVersion !== (session.sessionVersion ?? 0)) throw new AppError("Sila login semula.", 401);
+  if (rows[0].mustChangePassword && !allowPasswordChange) throw new AppError("Sila tukar password dahulu.", 403);
+  return { ...session, role: rows[0].role as Session["role"], familyId: rows[0].familyId, mustChangePassword: Boolean(rows[0].mustChangePassword) };
 }
 
 export async function requireAdmin(): Promise<Session> {

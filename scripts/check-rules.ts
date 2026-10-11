@@ -1,5 +1,7 @@
 import { assessFamily, expectedAmount, memberEligibility } from "../lib/business";
 import { claimSchema, paymentSchema, parseDataUrl } from "../lib/validators";
+import { detectMapping, groupImportRows } from "../lib/family-import";
+import { uniqueUsername } from "../lib/usernames";
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
@@ -107,3 +109,12 @@ assert(!claimSchema.safeParse({ ...claimInput, claimDate: "2026-02-30" }).succes
 assert(claimSchema.safeParse({ ...claimInput, claimDate: "2024-02-29" }).success, "Leap day must be accepted in leap years.");
 assert(parseDataUrl(`data:image/svg+xml;base64,${Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>').toString("base64")}`) === null, "Executable SVG uploads must be rejected.");
 console.log("Business rules and validation passed.");
+const mapping = detectMapping(["Nama Wakil", "Telefon", "Nama Ahli", "Hubungan", "No IC"]);
+const importedFamilies = groupImportRows([["Siti Aminah", "0123456789", "Siti Aminah", "Wakil", ""], ["", "", "Anak Siti", "Anak", "012345678901"]], mapping);
+assert(importedFamilies.families.length === 1 && importedFamilies.families[0].members.length === 2, "Blank wakil cells carry forward; the head is counted once.");
+const wide = groupImportRows([["Ali Baba", "Anak Satu", "Anak Dua"]], detectMapping(["Wakil", "Ahli 1", "Ahli 2"]));
+assert(wide.families[0].members.length === 3, "Wide member columns include the wakil once.");
+const names = new Set<string>();
+assert(uniqueUsername("Siti Aminah", names) === "siti" && uniqueUsername("Siti Aisyah", names) === "siti2", "Usernames must resolve duplicate first names.");
+assert(groupImportRows([["", "Anak"]], { ...detectMapping(["Wakil", "Ahli"]) }).errors.length === 1, "Members without a preceding wakil must be flagged.");
+console.log("Import grouping and username checks passed.");

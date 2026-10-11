@@ -8,6 +8,7 @@ import { AppError } from "./guard";
 import { hashPassword } from "./passwords";
 import { activityLog, claims, families, memberRequests, members, payments, receipts, settings, users } from "./schema";
 import type { Session } from "./auth-token";
+import { uniqueUsername, DEFAULT_WAKIL_PASSWORD } from "./usernames";
 
 function id(prefix: string) {
   return `${prefix}${randomBytes(4).toString("hex").toUpperCase()}`;
@@ -113,6 +114,7 @@ async function nextFamilyId() {
   const database = await db();
   const rows = await database.select({ familyId: families.familyId }).from(families);
   const max = rows.reduce((highest, row) => {
+    if (!/^K\d+$/.test(row.familyId)) return highest;
     const value = Number(row.familyId.replace(/\D/g, ""));
     return Number.isFinite(value) ? Math.max(highest, value) : highest;
   }, 0);
@@ -159,6 +161,7 @@ export async function getFamilyBundle(familyId: string) {
       openingBalance: family.openingBalance,
       notes: family.notes,
       email: userRows[0]?.email ?? null,
+      username: userRows[0]?.username ?? null,
     },
     members: memberRows.map((member) => toMemberDto(member, family.familyStatus)),
     payments: paymentRows.map((payment) => toPayment(payment)),
@@ -218,15 +221,17 @@ export async function listDirectory(query = "") {
 export async function createFamily(input: {
   wakilName: string;
   wakilPhone: string;
-  email: string;
-  password: string;
+  email?: string;
+  password?: string;
   familyStatus: "Active" | "Suspended" | "Inactive";
   joinedMonth: string;
   openingBalance: number;
   notes?: string;
 }) {
   const database = await db();
-  const email = input.email.toLowerCase();
+  const existingAccounts = await database.select({ username: users.username }).from(users);
+  const username = uniqueUsername(input.wakilName, new Set(existingAccounts.map((row) => row.username ?? "")));
+  const email = input.email?.toLowerCase() || `${username}@wakil.invalid`;
   const existing = await database.select().from(users).where(sql`lower(${users.email}) = ${email}`);
   if (existing.length) throw new AppError("That email is already registered.");
   const familyId = await nextFamilyId();
@@ -245,7 +250,9 @@ export async function createFamily(input: {
   await database.insert(users).values({
     id: id("U"),
     email,
-    passwordHash: hashPassword(input.password),
+    username,
+    passwordHash: hashPassword(DEFAULT_WAKIL_PASSWORD),
+    mustChangePassword: 1,
     name: input.wakilName,
     role: "wakil",
     familyId,
@@ -261,7 +268,7 @@ export async function updateFamily(
   input: {
     wakilName: string;
     wakilPhone: string;
-    email: string;
+    email?: string;
     password?: string;
     familyStatus: "Active" | "Suspended" | "Inactive";
     joinedMonth: string;
@@ -272,7 +279,8 @@ export async function updateFamily(
   const database = await db();
   const current = await database.select().from(families).where(eq(families.familyId, familyId));
   if (!current[0]) throw new AppError("Family not found.", 404);
-  const email = input.email.toLowerCase();
+  const linkedAccount = await database.select().from(users).where(eq(users.familyId, familyId));
+  const email = input.email?.toLowerCase() || linkedAccount[0]?.email || `${familyId.toLowerCase()}@wakil.invalid`;
   const emailOwner = await database.select().from(users).where(sql`lower(${users.email}) = ${email}`);
   if (emailOwner[0] && emailOwner[0].familyId !== familyId) throw new AppError("That email is already registered.");
   const timestamp = nowIso();
@@ -296,7 +304,7 @@ export async function updateFamily(
         email,
         name: input.wakilName,
         phone: input.wakilPhone,
-        ...(input.password ? { passwordHash: hashPassword(input.password) } : {}),
+        ...(input.password ? { passwordHash: hashPassword(input.password), mustChangePassword: 1, sessionVersion: sql`${users.sessionVersion} + 1` } : {}),
       })
       .where(eq(users.id, linked[0].id));
   }
@@ -718,7 +726,7 @@ export async function getAdminDashboard() {
 
 export async function findUserByEmail(email: string) {
   const database = await db();
-  const rows = await database.select().from(users).where(sql`lower(${users.email}) = ${email.toLowerCase()}`);
+  const rows = await database.select().from(users).where(sql`lower(${users.email}) = ${email.toLowerCase()} OR lower(${users.username}) = ${email.toLowerCase()}`);
   return rows[0] ?? null;
 }
 
@@ -737,6 +745,8 @@ export async function listAccounts() {
     .map((user) => ({
       id: user.id,
       email: user.email,
+      username: user.username,
+      mustChangePassword: Boolean(user.mustChangePassword),
       name: user.name,
       role: user.role,
       familyId: user.familyId,
@@ -752,8 +762,11 @@ export async function createAdminAccount(input: { name: string; email: string; p
   const existing = await findUserByEmail(input.email);
   if (existing) throw new AppError("An account with that email already exists.");
   const userId = id("U");
+  const accountNames = await database.select({ username: users.username }).from(users);
+  const username = uniqueUsername(input.name, new Set(accountNames.map((row) => row.username ?? "")));
   await database.insert(users).values({
     id: userId,
+    username,
     email: input.email.trim().toLowerCase(),
     passwordHash: hashPassword(input.password),
     name: input.name,
@@ -769,12 +782,13 @@ export async function createAdminAccount(input: { name: string; email: string; p
 export async function updateAccount(
   actorId: string,
   userId: string,
-  input: { name?: string; password?: string; phone?: string; active?: boolean },
+  input: { name?: string; password?: string; phone?: string; active?: boolean; resetDefault?: boolean },
 ) {
   const database = await db();
   const rows = await database.select().from(users).where(eq(users.id, userId));
   const user = rows[0];
   if (!user) throw new AppError("Account not found.", 404);
+  if (input.resetDefault && user.role !== "wakil") throw new AppError("Reset default hanya untuk wakil.");
   if (input.active === false && userId === actorId) throw new AppError("You cannot disable your own login.");
   if (input.active === false && user.role === "admin" && user.active !== 0) {
     const admins = await database.select().from(users).where(eq(users.role, "admin"));
@@ -784,7 +798,7 @@ export async function updateAccount(
     .update(users)
     .set({
       ...(input.name ? { name: input.name } : {}),
-      ...(input.password ? { passwordHash: hashPassword(input.password) } : {}),
+      ...((input.resetDefault || input.password) ? { passwordHash: hashPassword(input.resetDefault ? DEFAULT_WAKIL_PASSWORD : input.password!), mustChangePassword: 1, sessionVersion: sql`${users.sessionVersion} + 1` } : {}),
       ...(input.phone !== undefined ? { phone: input.phone || null } : {}),
       ...(input.active === undefined ? {} : { active: input.active ? 1 : 0 }),
     })

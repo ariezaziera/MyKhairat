@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui";
 
 type Initial = {
@@ -30,7 +31,7 @@ export function FamilyForm({ initial }: { initial?: Initial }) {
       wakilName: form.get("wakilName"),
       wakilPhone: form.get("wakilPhone"),
       email: form.get("email"),
-      password: form.get("password"),
+      password: String(form.get("password") ?? ""),
       familyStatus: form.get("familyStatus"),
       joinedMonth: form.get("joinedMonth"),
       openingBalance: Number(form.get("openingBalance") || 0),
@@ -76,12 +77,11 @@ export function FamilyForm({ initial }: { initial?: Initial }) {
           <input id="wakilPhone" name="wakilPhone" required defaultValue={initial?.wakilPhone} />
         </div>
         <div>
-          <label htmlFor="email">Wakil email</label>
-          <input id="email" name="email" type="email" required defaultValue={initial?.email} />
+          <label htmlFor="email">Wakil email (optional)</label>
+          <input id="email" name="email" type="email" defaultValue={initial?.email?.endsWith("@wakil.invalid") ? "" : initial?.email} />
         </div>
         <div>
-          <label htmlFor="password">{editing ? "New password (optional)" : "Password"}</label>
-          <input id="password" name="password" type="password" minLength={editing ? undefined : 6} required={!editing} />
+          {editing ? <><label htmlFor="password">New password (optional)</label><PasswordInput id="password" name="password" minLength={6} /></> : <p className="text-sm text-slate-600">Username dijana daripada nama pertama. Password awal: <strong>mykhairat</strong>. Wakil wajib tukar password selepas login pertama.</p>}
         </div>
         <div>
           <label htmlFor="joinedMonth">Joined month</label>

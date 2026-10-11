@@ -22,8 +22,10 @@ export async function POST(request: Request) {
       name: user.name,
       role,
       familyId: user.familyId,
+      sessionVersion: user.sessionVersion,
+      mustChangePassword: Boolean(user.mustChangePassword),
     });
-    return json({ role, familyId: user.familyId, name: user.name });
+    return json({ role, familyId: user.familyId, name: user.name, mustChangePassword: Boolean(user.mustChangePassword) });
   } catch (error) {
     return errorResponse(error);
   }

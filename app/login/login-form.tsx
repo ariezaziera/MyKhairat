@@ -1,11 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui";
 
 export function LoginForm({ error }: { error?: string }) {
-  const router = useRouter();
   const [message, setMessage] = useState(error ?? "");
   const [pending, setPending] = useState(false);
 
@@ -14,6 +13,7 @@ export function LoginForm({ error }: { error?: string }) {
     setPending(true);
     setMessage("");
     const form = new FormData(event.currentTarget);
+    try {
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -25,20 +25,24 @@ export function LoginForm({ error }: { error?: string }) {
       setMessage(data.error || "Could not sign in.");
       return;
     }
-    router.push(data.role === "admin" ? "/admin" : "/app");
-    router.refresh();
+    window.location.assign(data.mustChangePassword ? "/change-password" : data.role === "admin" ? "/admin" : "/app");
+    } catch {
+      setMessage("Sambungan gagal. Sila cuba lagi.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {message ? <p className="rounded-2xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{message}</p> : null}
       <div>
-        <label htmlFor="email">Email</label>
-        <input id="email" name="email" type="email" autoComplete="username" required placeholder="you@example.com" />
+        <label htmlFor="email">Username atau email</label>
+        <input id="email" name="email" type="text" autoComplete="username" required placeholder="Username wakil / email admin" />
       </div>
       <div>
         <label htmlFor="password">Password</label>
-        <input id="password" name="password" type="password" autoComplete="current-password" required placeholder="Password" />
+        <PasswordInput id="password" name="password" type="password" autoComplete="current-password" required placeholder="Password" />
       </div>
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "Signing in..." : "Log In"}

@@ -11,6 +11,8 @@ export type Session = {
   name: string;
   role: Role;
   familyId: string | null;
+  sessionVersion?: number;
+  mustChangePassword?: boolean;
 };
 
 function secretKey() {
@@ -29,6 +31,8 @@ export async function signSession(session: Session) {
     name: session.name,
     role: session.role,
     familyId: session.familyId,
+    sessionVersion: session.sessionVersion ?? 0,
+    mustChangePassword: session.mustChangePassword ?? false,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(session.sub)
@@ -48,6 +52,8 @@ export async function verifySession(token: string): Promise<Session | null> {
       name: String(payload.name || ""),
       role,
       familyId: payload.familyId ? String(payload.familyId) : null,
+      sessionVersion: Number(payload.sessionVersion ?? 0),
+      mustChangePassword: payload.mustChangePassword === true,
     };
   } catch {
     return null;
