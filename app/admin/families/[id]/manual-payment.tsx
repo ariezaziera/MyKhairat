@@ -27,7 +27,8 @@ export function ManualPayment({
     setPending(true);
     setError("");
     setNotice("");
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const response = await fetch("/api/payments/manual", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -47,7 +48,7 @@ export function ManualPayment({
       setError(data.error || "Could not record the payment.");
       return;
     }
-    event.currentTarget.reset();
+    formElement.reset();
     setNotice(data.approvalStatus === "Approved" ? "Payment recorded and approved. Baki semasa has been recalculated." : "Payment recorded as pending.");
     router.refresh();
   }

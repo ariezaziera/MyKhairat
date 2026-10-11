@@ -56,19 +56,21 @@ export function MemberTools({
 
   async function addMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const ok = await send("/api/members", "POST", {
       familyId,
       memberName: form.get("memberName"),
       relationship: form.get("relationship"),
       memberStatus: form.get("memberStatus"),
     });
-    if (ok) event.currentTarget.reset();
+    if (ok) formElement.reset();
   }
 
   async function saveMember(event: FormEvent<HTMLFormElement>, memberId: string) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     await send(`/api/members/${memberId}`, "PUT", {
       memberName: form.get("memberName"),
       relationship: form.get("relationship"),
@@ -78,7 +80,8 @@ export function MemberTools({
 
   async function recordClaim(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const ok = await send("/api/claims", "POST", {
       familyId,
       memberId: form.get("memberId"),
@@ -88,7 +91,7 @@ export function MemberTools({
       notes: form.get("notes"),
     });
     if (ok) {
-      event.currentTarget.reset();
+      formElement.reset();
       setClaimType("Death");
       setClaimAmount(String(deathPayout));
     }

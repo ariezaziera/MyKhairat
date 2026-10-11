@@ -1,4 +1,4 @@
-import { assertFamily, errorResponse, json, requireSession } from "@/lib/guard";
+import { assertFamily, errorResponse, json, requireAdmin, requireSession } from "@/lib/guard";
 import { deletePayment, getPayment } from "@/lib/queries";
 
 type Context = { params: Promise<{ id: string }> };
@@ -17,7 +17,7 @@ export async function GET(_request: Request, context: Context) {
 
 export async function DELETE(_request: Request, context: Context) {
   try {
-    const session = await requireSession();
+    const session = await requireAdmin();
     const { id } = await context.params;
     const payment = await getPayment(id);
     assertFamily(session, payment.familyId);

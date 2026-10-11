@@ -26,7 +26,8 @@ export function AccountsBoard({ accounts, currentUserId }: { accounts: AccountRo
     setPending(true);
     setError("");
     setNotice("");
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const response = await fetch("/api/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -43,7 +44,7 @@ export function AccountsBoard({ accounts, currentUserId }: { accounts: AccountRo
       setError(data.error || "Could not create the admin.");
       return;
     }
-    event.currentTarget.reset();
+    formElement.reset();
     setNotice("Admin account created.");
     router.refresh();
   }
@@ -114,7 +115,8 @@ export function AccountsBoard({ accounts, currentUserId }: { accounts: AccountRo
               className="grid gap-3 sm:grid-cols-2"
               onSubmit={(event) => {
                 event.preventDefault();
-                const form = new FormData(event.currentTarget);
+                const formElement = event.currentTarget;
+                const form = new FormData(formElement);
                 const password = String(form.get("password") ?? "");
                 const name = String(form.get("name") ?? "");
                 void patch(

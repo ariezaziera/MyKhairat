@@ -308,7 +308,11 @@ export async function deleteFamily(familyId: string) {
   const database = await db();
   const current = await database.select().from(families).where(eq(families.familyId, familyId));
   if (!current[0]) throw new AppError("Family not found.", 404);
-  await database.delete(claims).where(eq(claims.familyId, familyId));
+  const financialPayments = await database.select().from(payments).where(eq(payments.familyId, familyId));
+  const financialClaims = await database.select().from(claims).where(eq(claims.familyId, familyId));
+  if (financialPayments.length || financialClaims.length) {
+    throw new AppError("This family has financial records. Set it to Inactive to preserve its history.", 409);
+  }
   await database.delete(payments).where(eq(payments.familyId, familyId));
   await database.delete(receipts).where(eq(receipts.familyId, familyId));
   await database.delete(memberRequests).where(eq(memberRequests.familyId, familyId));
@@ -366,7 +370,10 @@ export async function deleteMember(memberId: string) {
   const database = await db();
   const rows = await database.select().from(members).where(eq(members.memberId, memberId));
   if (!rows[0]) throw new AppError("Member not found.", 404);
-  await database.delete(claims).where(eq(claims.memberId, memberId));
+  const recordedClaims = await database.select().from(claims).where(eq(claims.memberId, memberId));
+  if (recordedClaims.length) {
+    throw new AppError("This member has claim records. Set them to Tidak Aktif to preserve the payouts.", 409);
+  }
   await database.delete(members).where(eq(members.memberId, memberId));
   await syncAllFamilies();
   return rows[0].familyId;
@@ -612,6 +619,7 @@ export async function createClaim(
 }
 
 export async function getStatement(familyId: string, year: number) {
+  if (!Number.isInteger(year) || year < 1900 || year > 2099) throw new AppError("Choose a valid report year.");
   const bundle = await getFamilyBundle(familyId);
   const rows = buildMonthRows({
     joinedMonth: bundle.family.joinedMonth,
@@ -627,6 +635,7 @@ export async function getStatement(familyId: string, year: number) {
 }
 
 export async function getFinancialReport(year: number) {
+  if (!Number.isInteger(year) || year < 1900 || year > 2099) throw new AppError("Choose a valid report year.");
   const familiesLive = await syncAllFamilies();
   const { setting, memberRows, paymentRows } = await loadContext();
   const database = await db();

@@ -1,4 +1,5 @@
 import { assessFamily, expectedAmount, memberEligibility } from "../lib/business";
+import { claimSchema, paymentSchema, parseDataUrl } from "../lib/validators";
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
@@ -67,6 +68,8 @@ assert(pendingOnly.suggestedStatus === "Suspended" || pendingOnly.consecutiveUnp
 assert(pendingOnly.approvedTotal === 0, "Only approved payments reduce the balance.");
 
 const inactive = memberEligibility("Aktif", "Suspended");
+const partial = assessFamily({ joinedMonth: "2026-09", openingBalance: 0, familyStatus: "Active", activeCount: 4, rate: 5, dueDay: 7, now, payments: [{ paymentMonthYear: "2026-09", amountPaid: 5, approvalStatus: "Approved" }] });
+assert(partial.overdueMonths[0]?.outstanding === 15, "A partial legacy payment must not settle a month without a billing snapshot.");
 assert(!inactive.eligible, "Suspended families are not eligible for Khairat Kematian.");
 const dependent = memberEligibility("Tidak Aktif", "Active");
 assert(!dependent.eligible, "Only Aktif members are eligible.");
@@ -98,4 +101,9 @@ const locked = assessFamily({
 });
 assert(locked.suggestedStatus === "Inactive", "Inactive families are not auto-reactivated.");
 
-console.log("Business rules passed.");
+assert(!paymentSchema.safeParse({ familyId: "K001", paymentMonthYear: "2026-13", amountPaid: 5, transactionReference: "REF1", receiptId: "REC1" }).success, "Invalid months must be rejected.");
+const claimInput = { familyId: "K001", memberId: "M001", claimType: "Warded", amount: 200 };
+assert(!claimSchema.safeParse({ ...claimInput, claimDate: "2026-02-30" }).success, "Impossible dates must be rejected.");
+assert(claimSchema.safeParse({ ...claimInput, claimDate: "2024-02-29" }).success, "Leap day must be accepted in leap years.");
+assert(parseDataUrl(`data:image/svg+xml;base64,${Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>').toString("base64")}`) === null, "Executable SVG uploads must be rejected.");
+console.log("Business rules and validation passed.");

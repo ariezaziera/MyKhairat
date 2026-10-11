@@ -86,7 +86,7 @@ export function buildMonthRows(input: {
       (payment) => payment.paymentMonthYear === month && payment.approvalStatus === "Approved",
     );
     const paid = round2(approved.reduce((sum, payment) => sum + payment.amountPaid, 0));
-    const billed = approved.reduce((highest, payment) => Math.max(highest, payment.expectedAmount ?? payment.amountPaid), 0);
+    const billed = approved.reduce((highest, payment) => Math.max(highest, payment.expectedAmount ?? dues), 0);
     const expected = !inFund ? 0 : approved.length ? round2(billed) : dues;
     const outstanding = inFund ? round2(Math.max(0, expected - paid)) : 0;
     const settled = inFund && outstanding <= 0.001;

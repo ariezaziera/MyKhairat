@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-const month = z.string().regex(/^\d{4}-\d{2}$/, "Use a valid month");
+const month = z.string().regex(/^(19|20)\d{2}-(0[1-9]|1[0-2])$/, "Use a valid month");
+const calendarDate = z.string().regex(/^(19|20)\d{2}-(0[1-9]|1[0-2])-\d{2}$/).refine((value) => {
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}, "Use a valid calendar date");
 
 export const loginSchema = z.object({
   email: z.string().trim().email("Enter a valid email"),
@@ -64,7 +68,7 @@ export const rejectSchema = z.object({
 export const claimSchema = z.object({
   familyId: z.string().trim().min(2),
   memberId: z.string().trim().min(2),
-  claimDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  claimDate: calendarDate,
   claimType: z.enum(["Death", "Warded"]),
   amount: z.coerce.number().positive(),
   notes: z.string().trim().max(500).optional().or(z.literal("")),
@@ -95,7 +99,7 @@ export const manualPaymentSchema = z.object({
   paymentMonthYear: month,
   amountPaid: z.coerce.number().positive("Amount must be greater than 0"),
   transactionReference: z.string().trim().min(2).max(64),
-  paymentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  paymentDate: calendarDate,
   markApproved: z.boolean(),
   entryNote: z.string().trim().max(300).optional().or(z.literal("")),
 });
@@ -105,7 +109,7 @@ export const uploadSchema = z.object({
   dataUrl: z.string().min(30),
 });
 
-const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/svg+xml"]);
+const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 export function parseDataUrl(dataUrl: string) {
   const match = /^data:(image\/[a-zA-Z0-9.+-]+);base64,([a-zA-Z0-9+/=\r\n]+)$/.exec(dataUrl.trim());

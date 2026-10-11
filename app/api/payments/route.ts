@@ -9,6 +9,7 @@ export async function GET(request: Request) {
     const status = params.get("status") ?? undefined;
     const requestedFamily = params.get("familyId") ?? undefined;
     if (session.role === "wakil") {
+      if (!session.familyId) return json({ error: "No family is linked to this account." }, 403);
       return json(await listPayments({ familyId: session.familyId ?? undefined, status }));
     }
     await requireAdmin();
