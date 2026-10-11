@@ -2,6 +2,7 @@ import { createClient, type Client } from "@libsql/client";
 import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
 import { eq } from "drizzle-orm";
 import { MIGRATION_STATEMENTS } from "./migrate";
+import { migrateLegacySettings } from "./migrate-settings";
 import * as schema from "./schema";
 import { settings } from "./schema";
 import { nowIso } from "./format";
@@ -39,6 +40,7 @@ export function ensureSchema() {
     ready = (async () => {
       const client = getClient();
       await client.execute("PRAGMA foreign_keys = ON");
+      await migrateLegacySettings(client);
       for (const statement of MIGRATION_STATEMENTS) {
         await client.execute(statement);
       }
