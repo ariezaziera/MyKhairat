@@ -70,16 +70,16 @@ async function main() {
   await writeFile(`backups/legacy-accounts-${local?"local":"production"}-${stamp}.json`,JSON.stringify(encryptBackup({accounts:handover},passphrase)));
   const tx=await db.transaction("write");
   try {
-    if((await tx.execute("SELECT id FROM legacy_imports")).rows.length) throw new Error("Another import exists; abort");
-    for(const table of ["members","payments","claims","receipts","member_requests","fund_entries","bank_reconciliations","import_batches"]) if(Number((await tx.execute(`SELECT COUNT(*) n FROM ${table}`)).rows[0].n)!==0) throw new Error(`Unexpected existing ${table}; no data deleted`);
-    const fs=(await tx.execute("SELECT * FROM families")).rows;
+    const emptyTables=["members","payments","claims","receipts","member_requests","fund_entries","bank_reconciliations","import_batches"];
+    // Batch network round trips to stay within Turso's transaction timeout.
+    const guard=await tx.batch(["SELECT id FROM legacy_imports","SELECT * FROM families","SELECT id,username,family_id FROM users WHERE role='wakil'",...emptyTables.map(t=>`SELECT COUNT(*) n FROM ${t}`)]);
+    if(guard[0].rows.length) throw new Error("Another import exists; abort");
+    emptyTables.forEach((table,n)=>{if(Number(guard[n+3].rows[0].n)!==0) throw new Error(`Unexpected existing ${table}; no data deleted`);});
+    const fs=guard[1].rows;
     if(fs.length && !(fs.length===1 && fs[0].family_id==="K001" && fs[0].wakil_name==="Habibah" && Number(fs[0].opening_balance)===250)) throw new Error("Existing families no longer match authorized test record");
-    const wakils=(await tx.execute("SELECT id,username,family_id FROM users WHERE role='wakil'")).rows;
+    const wakils=guard[2].rows;
     if(wakils.some(u=>u.family_id!=="K001" || u.username!=="habibah")) throw new Error("Unexpected existing wakil account");
-    await tx.execute("DELETE FROM monthly_assessments WHERE family_id='K001'");
-    await tx.execute("DELETE FROM users WHERE role='wakil' AND family_id='K001' AND username='habibah'");
-    await tx.execute("DELETE FROM families WHERE family_id='K001'");
-    await tx.batch(statements);
+    await tx.batch(["DELETE FROM monthly_assessments WHERE family_id='K001'","DELETE FROM users WHERE role='wakil' AND family_id='K001' AND username='habibah'","DELETE FROM families WHERE family_id='K001'",...statements]);
     if((await tx.execute("PRAGMA foreign_key_check")).rows.length) throw new Error("Foreign key validation failed");
     const check=(await tx.execute("SELECT (SELECT COUNT(*) FROM families) families,(SELECT COUNT(*) FROM members) members,(SELECT SUM(amount_paid) FROM payments WHERE approval_status='Approved' AND is_opening_allocation=0) collections,(SELECT SUM(amount) FROM claims WHERE status='Paid') disbursed")).rows[0];
     if(Number(check.families)!==20 || Number(check.members)!==80 || Number(check.collections)!==2360 || Number(check.disbursed)!==400) throw new Error("Post-import totals failed");
