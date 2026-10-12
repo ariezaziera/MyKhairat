@@ -1,4 +1,5 @@
 "use client";
+import { UploadSample } from "@/components/upload-sample";
 import { useState } from "react";
 import { Card, Button } from "@/components/ui";
 import { api } from "@/lib/client-api";
@@ -26,6 +27,7 @@ export function TransactionImport() {
         untuk mengesahkan assessment sejarah. Maksimum500 baris, .xlsx/CSV
         bawah3MB.
       </p>
+      <UploadSample kind="transactions" />
       <label className="mt-5">
         Fail transaksi
         <input

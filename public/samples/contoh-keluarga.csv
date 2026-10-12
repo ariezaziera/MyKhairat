@@ -1,0 +1,5 @@
+﻿"Family ID","Nama Wakil","Telefon","Nama Ahli","Hubungan","No IC","ID Ahli","Bulan Mula","Status"
+"CONTOH-K01","Wakil Contoh A","","Wakil Contoh A","Ketua Keluarga","","CONTOH-A01","2025-01","Aktif"
+"CONTOH-K01","Wakil Contoh A","","Pasangan Contoh A","Pasangan","","CONTOH-A02","2025-01","Aktif"
+"CONTOH-K01","Wakil Contoh A","","Anak Contoh A","Anak","","CONTOH-A03","2025-01","Aktif"
+"CONTOH-K02","Wakil Contoh B","","Wakil Contoh B","Ketua Keluarga","","CONTOH-B01","2025-02","Aktif"

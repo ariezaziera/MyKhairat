@@ -1,4 +1,5 @@
 "use client";
+import { UploadSample } from "@/components/upload-sample";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button, Card } from "@/components/ui";
@@ -97,6 +98,7 @@ export function DuitnowForm({
             }}
           />
         </label>
+        <UploadSample kind="duitnow" />
         <div className="mt-5 flex flex-wrap gap-3">
           {preview && !remove && (
             <Button

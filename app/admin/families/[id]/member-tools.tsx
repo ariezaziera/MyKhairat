@@ -1,4 +1,5 @@
 "use client";
+import { UploadSample } from "@/components/upload-sample";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { api, uploadEvidence } from "@/lib/client-api";
@@ -423,6 +424,7 @@ export function MemberTools({
                   required
                 />
               </label>
+              <UploadSample kind="evidence" className="md:col-span-2" />
               <label>
                 Alasan pengecualian kadar (jika ada)
                 <input name="exceptionReason" maxLength={500} />

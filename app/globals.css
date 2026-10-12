@@ -242,31 +242,8 @@ h1 {
 html[data-text="large"] {
   font-size: 18px;
 }
-html[data-motion="off"] *,
-html[data-motion="off"] *:before,
-html[data-motion="off"] *:after {
-  animation: none !important;
-  transition: none !important;
-  scroll-behavior: auto !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *:before,
-  *:after {
-    animation: none !important;
-    transition: none !important;
-    scroll-behavior: auto !important;
-  }
-  .scene-world {
-    transform: none !important;
-  }
-}
 @media (min-width: 1024px) {
   .app-main {
     padding-bottom: 2rem;
   }
-}
-
-html[data-motion="off"] .scene-world {
-  transform: none !important;
 }

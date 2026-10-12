@@ -1,4 +1,5 @@
 "use client";
+import { UploadSample } from "@/components/upload-sample";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Button, Card } from "@/components/ui";
@@ -124,6 +125,7 @@ export function ImportForm() {
         baris sebelumnya.
       </p>
       <Card>
+        <UploadSample kind="families" />
         <label htmlFor="file">
           Upload senarai wakil dan ahli (gunakan Family ID / ID Ahli untuk nama
           sama)

@@ -1,4 +1,5 @@
 "use client";
+import { UploadSample } from "@/components/upload-sample";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button, Card } from "@/components/ui";
@@ -224,6 +225,7 @@ export function PaymentForm({
                   PNG/JPG/WebP bawah 2MB.
                 </span>
               </label>
+              <UploadSample kind="receipt" />
               {preview && (
                 <img
                   src={preview}

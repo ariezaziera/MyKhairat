@@ -1,4 +1,5 @@
 "use client";
+import { UploadSample } from "@/components/upload-sample";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -172,6 +173,7 @@ export function ClaimsBoard({
                   required
                 />
               </label>
+              <UploadSample kind="receipt" className="md:col-span-2" />
               <label>
                 Catatan
                 <input name="note" required minLength={5} />

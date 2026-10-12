@@ -1,6 +1,6 @@
 import { Logo } from "@/components/logo";
 import { FamilyScene } from "@/components/family-scene";
-import { MotionControls } from "@/components/motion-controls";
+import { TextSizeControl } from "@/components/text-size-control";
 import { LoginForm } from "./login-form";
 export default async function LoginPage({
   searchParams,
@@ -35,7 +35,7 @@ export default async function LoginPage({
             <Logo />
           </div>
           <div className="mb-8">
-            <MotionControls />
+            <TextSizeControl />
           </div>
           <p className="eyebrow">MyKhairat</p>
           <h2 className="text-3xl font-semibold">Selamat datang</h2>

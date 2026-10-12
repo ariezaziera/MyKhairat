@@ -89,7 +89,7 @@ Skrip menolak sasaran sama dengan TURSO_DATABASE_URL dan database berisi data. I
 
 ## UI dan akses
 
-Bahasa Melayu, tema biru gelap/hijau, input16px, kawalan besar, sidebar desktop, nav mobile, safe areas, scroll drawer, fokus keyboard dan Escape. Ilustrasi keluarga ialah SVG berlapis dengan CSS3D/pointer parallax; tiada runtime WebGL atau muat turun model berat. Pilihan Teks besar/Kurangkan animasi disimpan per browser dan prefers-reduced-motion dihormati.
+Bahasa Melayu, tema biru gelap/hijau, input16px, kawalan besar, sidebar desktop, nav mobile, safe areas, scroll drawer, fokus keyboard dan Escape. Ilustrasi keluarga ialah SVG berlapis dengan CSS3D/pointer parallax; tiada runtime WebGL atau muat turun model berat. Pilihan Teks besar disimpan per browser. Animasi berjalan automatik tanpa butang pause/play; tetapan animasi lama tidak lagi digunakan.
 
 Tiada ujian visual browser/screen-reader semua viewport dijalankan dalam sesi ini. Buat semakan pengguna sebenar pada320/375/768/1440px, landscape dan zoom200% sebelum mengisytiharkan pematuhan accessibility penuh.
 
@@ -101,3 +101,7 @@ Tiada ujian visual browser/screen-reader semua viewport dijalankan dalam sesi in
 - `npm audit --omit=dev`:0 advisory semasa pembaikan. Full development tree masih menunjukkan7 entri high yang berpunca daripada braces, dengan tiada patched release ketika semakan. App tidak menerima glob pengguna; patterns build/lint ialah sumber repositori. [Advisory upstream](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm). esbuild dan selector-parser dev telah dipatch. Jangan gunakan npm audit fix --force sebagai pengganti semakan major upgrade.
 
 FPX/payment gateway dan notifikasi WhatsApp automatik bukan sebahagian aliran harian ini; ia memerlukan akaun provider, webhook/verification serta persetujuan operasi berasingan. Rekod dan angka sejarah sebenar hanya boleh disahkan AJK daripada dokumen asal, bukan dijana oleh sistem.
+
+## Fail contoh upload
+
+Setiap input upload menyediakan pautan muat turun contoh. Import keluarga dan transaksi mempunyai template Excel/CSV dalam `public/samples`, dengan tajuk kolum sepadan parser. Tukar semua data CONTOH sebelum import; Family ID transaksi mesti ID sebenar dalam sistem. Contoh resit, bukti tuntutan dan panduan QR ialah PNG berlabel CONTOH, bukan bukti atau QR bayaran sebenar. Had: 3 MB untuk import, 2 MB untuk imej PNG/JPG/WebP.

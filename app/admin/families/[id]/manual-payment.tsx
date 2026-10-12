@@ -1,4 +1,5 @@
 "use client";
+import { UploadSample } from "@/components/upload-sample";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button, Card } from "@/components/ui";
@@ -154,6 +155,7 @@ export function ManualPayment({
             resit dan catatan.
           </span>
         </label>
+        <UploadSample kind="receipt" className="sm:col-span-2" />
         <label className="sm:col-span-2">
           Catatan / sumber
           <input

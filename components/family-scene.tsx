@@ -9,11 +9,7 @@ export function FamilyScene({ compact = false }: { compact?: boolean }) {
       className={`family-scene ${compact ? "family-scene-compact" : ""}`}
       aria-hidden="true"
       onPointerMove={(e) => {
-        if (
-          e.pointerType === "touch" ||
-          document.documentElement.dataset.motion === "off"
-        )
-          return;
+        if (e.pointerType === "touch") return;
         const r = e.currentTarget.getBoundingClientRect();
         setAngle({
           x: ((e.clientX - r.left - r.width / 2) / r.width) * 16,

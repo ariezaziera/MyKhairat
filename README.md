@@ -15,7 +15,7 @@ Next.js App Router · TypeScript · Tailwind CSS · Turso SQLite / libSQL · Git
 - Tuntutan kematian/wad: permohonan, semakan, kelulusan dan bukti payout.
 - Kuasa owner/bendahari/pelulus/auditor, wakil ganti dan reset dengan kod pengaktifan.
 - IC terenkripsi/tersamar, audit, PDF, backup manual/harian terenkripsi dan restore ke database kosong.
-- UI Bahasa Melayu, ilustrasi SVG/CSS3D, reduced motion, teks besar dan layout responsif.
+- UI Bahasa Melayu, ilustrasi SVG/CSS3D, animasi automatik, teks besar dan layout responsif.
 
 ## Jalankan secara lokal
 

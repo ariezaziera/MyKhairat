@@ -21,7 +21,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Logo } from "./logo";
-import { MotionControls } from "./motion-controls";
+import { TextSizeControl } from "./text-size-control";
 import { can, type Permission } from "@/lib/permissions";
 type Item = {
   href: string;
@@ -320,7 +320,7 @@ function Shell({
             <p className="truncate font-semibold">{current?.label || role}</p>
             <p className="truncate text-sm text-slate-600">{detail}</p>
           </div>
-          <MotionControls />
+          <TextSizeControl />
           <Logout />
         </header>
         <main
