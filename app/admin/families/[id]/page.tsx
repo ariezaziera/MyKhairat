@@ -29,7 +29,7 @@ export default async function FamilyDetailPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold">{bundle.family.familyId}</h1>
-          <p className="text-slate-500">{bundle.family.wakilName}</p>
+          <p className="text-slate-500">{bundle.family.familyName} · Wakil: {bundle.family.wakilName}</p>
           <p className="text-sm font-semibold text-brand-blue">
             Username: {bundle.family.username ?? "Belum dijana"}
           </p>
@@ -67,6 +67,7 @@ export default async function FamilyDetailPage({
           initial={{
             familyId: bundle.family.familyId,
             wakilName: bundle.family.wakilName,
+            familyName: bundle.family.familyName,
             wakilPhone: bundle.family.wakilPhone,
             email: bundle.family.email ?? "",
             familyStatus: bundle.family.familyStatus,

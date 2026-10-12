@@ -99,7 +99,7 @@ export default async function Directory({
                       {f.familyId}
                     </td>
                     <td className="pr-4">
-                      <p className="font-semibold">{f.wakilName}</p>
+                      <p className="font-semibold">{f.familyName || f.wakilName}</p><p className="text-sm text-slate-500">Wakil: {f.wakilName}</p>
                       <p className="mt-1 text-sm text-slate-600">
                         {f.wakilPhone}
                       </p>
@@ -138,6 +138,7 @@ export default async function Directory({
                 </div>
                 <h2 className="mt-4 break-words text-xl font-semibold">
                   {f.wakilName}
+                  {f.familyName && <p className="text-sm text-slate-500">{f.familyName}</p>}
                 </h2>
                 <p className="mt-3 text-slate-600">
                   {f.activeMembers} ahli aktif · {formatRM(f.monthlyDues)} /

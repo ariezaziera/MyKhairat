@@ -184,7 +184,7 @@ export async function fundSummary(asOf?: string) {
   const where = asOf ? " AND payment_date<=?" : "";
   const [payments, claims, entries, reconciliation] = await Promise.all([
     client.execute({
-      sql: `SELECT COALESCE(SUM(amount_paid),0) AS total FROM payments WHERE approval_status='Approved'${where}`,
+      sql: `SELECT COALESCE(SUM(amount_paid),0) AS total FROM payments WHERE approval_status='Approved' AND is_opening_allocation=0${where}`,
       args: asOf ? [asOf] : [],
     }),
     client.execute({
@@ -192,7 +192,7 @@ export async function fundSummary(asOf?: string) {
       args: asOf ? [asOf] : [],
     }),
     client.execute({
-      sql: `SELECT COALESCE(SUM(amount),0) AS total, COUNT(CASE WHEN kind='Opening' THEN 1 END) AS openings FROM fund_entries${asOf ? " WHERE date<=?" : ""}`,
+      sql: `SELECT COALESCE(SUM(amount),0) AS total, COUNT(CASE WHEN kind='Opening' THEN 1 END) AS openings FROM fund_entries WHERE confirmed=1${asOf ? " AND date<=?" : ""}`,
       args: asOf ? [asOf] : [],
     }),
     client.execute(

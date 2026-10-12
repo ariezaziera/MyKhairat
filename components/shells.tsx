@@ -54,6 +54,7 @@ const wakilItems: Item[] = [
   },
 ];
 const adminItems: Item[] = [
+  { href: "/admin/import-review", label: "Semakan import", icon: FileText, group: "Pentadbiran", permission: "settings" },
   {
     href: "/admin",
     label: "Ringkasan",

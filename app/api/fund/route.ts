@@ -76,7 +76,7 @@ export async function POST(request: Request) {
         if (p.kind === "Opening") {
           const first = (
             await tx.execute(
-              "SELECT MIN(d) AS first_date FROM (SELECT payment_date AS d FROM payments WHERE approval_status='Approved' UNION ALL SELECT COALESCE(paid_date,claim_date) AS d FROM claims WHERE status='Paid' UNION ALL SELECT date AS d FROM fund_entries)",
+              "SELECT MIN(d) AS first_date FROM (SELECT payment_date AS d FROM payments WHERE approval_status='Approved' AND is_opening_allocation=0 UNION ALL SELECT COALESCE(paid_date,claim_date) AS d FROM claims WHERE status='Paid' UNION ALL SELECT date AS d FROM fund_entries WHERE confirmed=1)",
             )
           ).rows[0]?.first_date;
           if (first && p.date >= String(first))
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
             409,
           );
         await tx.execute({
-          sql: "INSERT INTO fund_entries VALUES(?,?,?,?,?,?,?,?)",
+          sql: "INSERT INTO fund_entries(id,date,kind,amount,reference,note,actor_id,created_at) VALUES(?,?,?,?,?,?,?,?)",
           args: [
             randomUUID(),
             p.date,

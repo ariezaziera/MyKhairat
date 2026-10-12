@@ -61,6 +61,8 @@ export default async function ApprovalDetailPage({
             value={payment.transactionReference}
           />
           <Detail label="Phone" value={payment.wakilPhone ?? "—"} />
+          {payment.sourceReference && <Detail label="Rujukan asal workbook" value={payment.sourceReference}/>}
+          {payment.entryNote && <Detail label="Catatan" value={payment.entryNote}/>}
           {payment.rejectionReason ? (
             <Detail label="Rejection reason" value={payment.rejectionReason} />
           ) : null}
@@ -70,10 +72,10 @@ export default async function ApprovalDetailPage({
               value={`${payment.reviewedBy} · ${payment.reviewedAt ? formatDate(payment.reviewedAt) : ""}`}
             />
           ) : null}
-          <ReviewPanel
+          {payment.sourceBatchId ? <Link href="/admin/import-review" className="action-link">Semak bersama rekod import (pentadbir utama)</Link> : <ReviewPanel
             paymentId={payment.paymentId}
             pending={payment.approvalStatus === "Pending"}
-          />
+          />}
         </Card>
       </div>
     </div>

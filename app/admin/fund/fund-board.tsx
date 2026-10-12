@@ -132,7 +132,7 @@ export function FundBoard({
               {entries.map((e) => (
                 <tr key={String(e.id)} className="border-t border-slate-200">
                   <td className="py-3 pr-3">{e.date}</td>
-                  <td className="pr-3">{e.kind}</td>
+                  <td className="pr-3">{e.kind}{Number(e.confirmed)===0 && <p className="text-sm font-semibold text-amber-800">Belum disahkan — tidak dikira</p>}</td>
                   <td className="pr-3">{e.reference}</td>
                   <td className="pr-3 whitespace-nowrap">
                     {formatRM(Number(e.amount))}

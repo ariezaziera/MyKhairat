@@ -287,6 +287,7 @@ export async function getFamilyBundle(familyId: string) {
     settings: setting,
     family: {
       familyId: family.familyId,
+      familyName: family.familyName ?? "",
       wakilName: family.wakilName,
       wakilPhone: family.wakilPhone,
       familyStatus: family.familyStatus,
@@ -309,6 +310,9 @@ export async function getFamilyBundle(familyId: string) {
 
 function toPayment(payment: typeof payments.$inferSelect, wakilName?: string) {
   return {
+    isOpeningAllocation: Boolean(payment.isOpeningAllocation),
+    sourceReference: payment.sourceReference,
+    sourceBatchId: payment.sourceBatchId,
     paymentId: payment.paymentId,
     familyId: payment.familyId,
     wakilName: wakilName ?? null,
@@ -345,6 +349,7 @@ export async function listDirectory(query = "") {
       );
       return {
         familyId: family.familyId,
+        familyName: family.familyName ?? "",
         wakilName: family.wakilName,
         wakilPhone: family.wakilPhone,
         familyStatus: family.familyStatus,
@@ -359,7 +364,7 @@ export async function listDirectory(query = "") {
   return directory
     .filter((family) => {
       if (!needle) return true;
-      return `${family.familyId} ${family.wakilName} ${family.wakilPhone}`
+      return `${family.familyId} ${family.familyName} ${family.wakilName} ${family.wakilPhone}`
         .toLowerCase()
         .includes(needle);
     })
@@ -368,6 +373,7 @@ export async function listDirectory(query = "") {
 
 export async function createFamily(
   input: {
+    familyName?: string;
     wakilName: string;
     wakilPhone: string;
     email?: string;
@@ -427,8 +433,8 @@ export async function createFamily(
       ],
     });
     await tx.execute({
-      sql: "UPDATE families SET registration_complete=0 WHERE family_id=?",
-      args: [familyId],
+      sql: "UPDATE families SET registration_complete=0,family_name=? WHERE family_id=?",
+      args: [input.familyName || null, familyId],
     });
     if (input.billingStartMonth)
       await tx.execute({
@@ -470,6 +476,7 @@ export async function createFamily(
 export async function updateFamily(
   familyId: string,
   input: {
+    familyName?: string;
     wakilName: string;
     wakilPhone: string;
     email?: string;
@@ -510,8 +517,9 @@ export async function updateFamily(
         "Tarikh asal tidak boleh diubah selepas assessment dijana. Gunakan pengesahan sejarah.",
       );
     await tx.execute({
-      sql: "UPDATE families SET wakil_name=?,wakil_phone=?,family_status=?,opening_balance=?,notes=?,updated_at=? WHERE family_id=?",
+      sql: "UPDATE families SET family_name=COALESCE(?,family_name),wakil_name=?,wakil_phone=?,family_status=?,opening_balance=?,notes=?,updated_at=? WHERE family_id=?",
       args: [
+        input.familyName ?? null,
         input.wakilName,
         input.wakilPhone,
         input.familyStatus,
@@ -1024,6 +1032,8 @@ async function reviewPayment(
 ) {
   await db();
   const result = await write(async (tx) => {
+    const source = (await tx.execute({sql:"SELECT source_batch_id FROM payments WHERE payment_id=?",args:[paymentId]})).rows[0];
+    if (source?.source_batch_id) throw new AppError("Rekod import perlu disemak melalui Semakan import supaya agihan gabungan dan baki asal kekal seimbang.",409);
     const rows = await tx.execute({
       sql: "UPDATE payments SET approval_status=?,rejection_reason=?,reviewed_by=?,reviewed_at=? WHERE payment_id=? AND approval_status='Pending' RETURNING family_id",
       args: [status, reason || null, adminName, nowIso(), paymentId],
@@ -1305,7 +1315,7 @@ export async function getFinancialReport(year: number) {
       cashReceived: paymentRows
         .filter(
           (p) =>
-            p.approvalStatus === "Approved" && p.paymentDate.startsWith(month),
+            p.approvalStatus === "Approved" && !p.isOpeningAllocation && p.paymentDate.startsWith(month),
         )
         .reduce((n, p) => n + p.amountPaid, 0),
       unconfirmed: billing.rows.filter((r) => r.month === month && !r.confirmed)

@@ -1,6 +1,7 @@
 import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const settings = sqliteTable("settings", {
+  programStartMonth: text("program_start_month"),
   bankVerified: integer("bank_verified").notNull().default(0),
   id: integer("id").primaryKey(),
   baseRatePerMember: real("base_rate_per_member").notNull(),
@@ -20,6 +21,7 @@ export const settings = sqliteTable("settings", {
 });
 
 export const families = sqliteTable("families", {
+  familyName: text("family_name"),
   registrationComplete: integer("registration_complete").notNull().default(1),
   externalId: text("external_id"),
   billingStartMonth: text("billing_start_month"),
@@ -75,6 +77,10 @@ export const receipts = sqliteTable("receipts", {
 });
 
 export const payments = sqliteTable("payments", {
+  isOpeningAllocation: integer("is_opening_allocation").notNull().default(0),
+  sourceReference: text("source_reference"),
+  sourceBatchId: text("source_batch_id"),
+  sourceRow: integer("source_row"),
   paymentId: text("payment_id").primaryKey(),
   familyId: text("family_id").notNull(),
   paymentDate: text("payment_date").notNull(),

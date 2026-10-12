@@ -1,0 +1,11 @@
+backups/
+.env*
+*.db
+*.db-*
+cookies.txt
+.secret-*.tmp
+.data-key-upload.tmp
+.test-upgrade-backup.json
+node_modules/
+.next/
+.git/

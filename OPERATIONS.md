@@ -102,6 +102,16 @@ Tiada ujian visual browser/screen-reader semua viewport dijalankan dalam sesi in
 
 FPX/payment gateway dan notifikasi WhatsApp automatik bukan sebahagian aliran harian ini; ia memerlukan akaun provider, webhook/verification serta persetujuan operasi berasingan. Rekod dan angka sejarah sebenar hanya boleh disahkan AJK daripada dokumen asal, bukan dijana oleh sistem.
 
+## Migrasi workbook lama
+
+`npx tsx scripts/import-legacy.ts <fail.xlsx>` hanya menghasilkan preview. Adapter ini khusus untuk struktur workbook yang telah diaudit; jumlah / baris yang berubah akan ditolak. `--apply --local` menggunakan `backups/legacy-rehearsal.db`; `--apply` tanpa `--local` menggunakan database dalam `.env.local`. Deploy kod semakan import dahulu sebelum import production.
+
+Sebelum perubahan, skrip menyimpan dan menguji backup terenkripsi dengan BACKUP_PASSPHRASE. Semua insert dan pembuangan keluarga ujian yang dibenarkan dibuat dalam satu transaksi. Hash sumber mencegah import berulang. Fail asal dan kod pengaktifan tidak masuk Git; salinan sumber terenkripsi juga disimpan dalam `legacy_imports`.
+
+Pentadbir utama menggunakan `/admin/import-review` untuk muat turun sumber dan menyelesaikan isu dengan alasan. Agihan baki 2025 berstatus Pending dan `is_opening_allocation=1`; ia bukan penerimaan tunai baharu. Baki asal berstatus `confirmed=0`. Pengesahan berkumpulan mengesahkan agihan dan satu baki asal secara atomik. Bayaran kemungkinan pendua gabungan juga mesti diputuskan bersama. Semakan resit biasa menolak perubahan rekod import.
+
+`npx tsx scripts/check-legacy.ts` memeriksa sumber persendirian dan database rehearsal, termasuk jumlah, idempotensi melalui arahan import semula, kiraan ahli, akaun, hubungan rekod dan kiraan tunggal baki asal. Jangan ubah source workbook untuk meluluskan semakan yang gagal; audit perubahan sumber dahulu.
+
 ## Fail contoh upload
 
 Setiap input upload menyediakan pautan muat turun contoh. Import keluarga dan transaksi mempunyai template Excel/CSV dalam `public/samples`, dengan tajuk kolum sepadan parser. Tukar semua data CONTOH sebelum import; Family ID transaksi mesti ID sebenar dalam sistem. Contoh resit, bukti tuntutan dan panduan QR ialah PNG berlabel CONTOH, bukan bukti atau QR bayaran sebenar. Had: 3 MB untuk import, 2 MB untuk imej PNG/JPG/WebP.

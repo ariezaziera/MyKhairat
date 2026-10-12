@@ -46,8 +46,9 @@ export const settingsSchema = z.object({
 });
 
 export const familyCreateSchema = z.object({
+  familyName: z.string().trim().max(160).optional(),
   wakilName: z.string().trim().min(2).max(120),
-  wakilPhone: z.string().trim().min(8).max(20),
+  wakilPhone: z.union([z.string().trim().min(8).max(20),z.literal("")]),
   email: z.union([z.string().trim().email(), z.literal("")]).optional(),
   password: z.string().optional(),
   familyStatus: z.enum(["Active", "Suspended", "Inactive"]),

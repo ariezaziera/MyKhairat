@@ -129,6 +129,7 @@ export function ensureSchema() {
         "INTEGER NOT NULL DEFAULT 0",
       );
       const db = getDb();
+      await addColumn(client, "settings", "program_start_month", "TEXT");
       const existing = await db
         .select()
         .from(settings)

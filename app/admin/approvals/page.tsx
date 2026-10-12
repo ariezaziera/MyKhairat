@@ -26,6 +26,7 @@ export default async function ApprovalsPage({
           Semak penerima, jumlah, rujukan dan bukti pembayaran bersama.
         </p>
       </div>
+      <Link href="/admin/import-review" className="action-link">Semak rekod import / baki asal 2025</Link>
       <div className="flex gap-2">
         {filters.map((item) => (
           <Link
@@ -70,6 +71,7 @@ export default async function ApprovalsPage({
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
                       Ref {payment.transactionReference}
+                      {payment.isOpeningAllocation && <span className="block font-semibold text-amber-800">Agihan baki 2025 — bukan resit tunai</span>}
                     </p>
                   </div>
                   <div className="text-right">

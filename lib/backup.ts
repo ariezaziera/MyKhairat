@@ -20,6 +20,8 @@ export const BACKUP_TABLES = [
   "fund_entries",
   "bank_reconciliations",
   "import_batches",
+  "legacy_imports",
+  "legacy_issues",
 ] as const;
 export function encryptBackup(value: unknown, passphrase: string) {
   const salt = randomBytes(16),

@@ -5,11 +5,13 @@ import { malaysiaMonth } from "./dates";
 export async function upgradeSystem(client: Client) {
   const columns: Record<string, Record<string, string>> = {
     settings: {
+      program_start_month: "TEXT",
       bank_verified: "INTEGER NOT NULL DEFAULT 0",
       support_phone: "TEXT NOT NULL DEFAULT ''",
       agreement_month: "TEXT",
     },
     families: {
+      family_name: "TEXT",
       registration_complete: "INTEGER NOT NULL DEFAULT 1",
       external_id: "TEXT",
       billing_start_month: "TEXT",
@@ -38,7 +40,13 @@ export async function upgradeSystem(client: Client) {
       policy_amount: "REAL",
       exception_reason: "TEXT",
     },
-    payments: { receipt_fingerprint: "TEXT" },
+    payments: {
+      receipt_fingerprint: "TEXT",
+      is_opening_allocation: "INTEGER NOT NULL DEFAULT 0",
+      source_reference: "TEXT",
+      source_batch_id: "TEXT",
+      source_row: "INTEGER",
+    },
   };
   for (const [table, definitions] of Object.entries(columns)) {
     const info = await client.execute(`PRAGMA table_info(${table})`);
@@ -57,6 +65,8 @@ export async function upgradeSystem(client: Client) {
     }
   }
   const statements = [
+    `CREATE TABLE IF NOT EXISTS legacy_imports (id TEXT PRIMARY KEY,source_sha256 TEXT NOT NULL UNIQUE,source_name TEXT NOT NULL,source_archive TEXT NOT NULL,summary TEXT NOT NULL,created_at TEXT NOT NULL)`,
+    `CREATE TABLE IF NOT EXISTS legacy_issues (id TEXT PRIMARY KEY,batch_id TEXT NOT NULL,kind TEXT NOT NULL,title TEXT NOT NULL,detail TEXT NOT NULL,status TEXT NOT NULL CHECK(status IN ('Open','Resolved')),resolution TEXT,created_at TEXT NOT NULL,resolved_at TEXT)`,
     `CREATE TABLE IF NOT EXISTS system_backups (id TEXT PRIMARY KEY,day TEXT NOT NULL UNIQUE,created_at TEXT NOT NULL,payload TEXT NOT NULL,bytes INTEGER NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS system_migrations (key TEXT PRIMARY KEY, applied_at TEXT NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS monthly_assessments (family_id TEXT NOT NULL REFERENCES families(family_id), month TEXT NOT NULL, active_count INTEGER NOT NULL, rate REAL NOT NULL, due_day INTEGER NOT NULL, expected REAL NOT NULL, confirmed INTEGER NOT NULL DEFAULT 0, source TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY(family_id,month))`,
@@ -71,6 +81,11 @@ export async function upgradeSystem(client: Client) {
     `CREATE INDEX IF NOT EXISTS idx_fund_date ON fund_entries(date)`,
   ];
   for (const statement of statements) await client.execute(statement);
+  const fundColumns = await client.execute("PRAGMA table_info(fund_entries)");
+  if (!fundColumns.rows.some((r) => r.name === "confirmed")) {
+    try { await client.execute("ALTER TABLE fund_entries ADD COLUMN confirmed INTEGER NOT NULL DEFAULT 1"); }
+    catch (error) { if (!(await client.execute("PRAGMA table_info(fund_entries)")).rows.some((r) => r.name === "confirmed")) throw error; }
+  }
   // Cookies.txt was accidentally committed in earlier history. Revoke existing
   // sessions once, without changing account credentials, before serving requests.
   await client.batch(

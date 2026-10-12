@@ -17,6 +17,8 @@ async function main() {
   process.env.TURSO_AUTH_TOKEN = process.env.RESTORE_AUTH_TOKEN || "";
   const encrypted = JSON.parse(await readFile(filename, "utf8"));
   const backup = decryptBackup(encrypted, passphrase);
+  // Older encrypted backups predate the source archive / review tables.
+  if (backup.tables) for (const t of ["legacy_imports", "legacy_issues"]) backup.tables[t] ??= [];
   if (
     backup.version !== 1 ||
     !backup.tables ||

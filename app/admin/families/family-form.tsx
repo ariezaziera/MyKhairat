@@ -6,6 +6,7 @@ import { api } from "@/lib/client-api";
 import { Button, Card } from "@/components/ui";
 import { malaysiaMonth } from "@/lib/dates";
 type Initial = {
+  familyName?: string;
   familyId: string;
   wakilName: string;
   wakilPhone: string;
@@ -83,6 +84,7 @@ export function FamilyForm({ initial }: { initial?: Initial }) {
             </p>
           )}
           <div className="grid gap-4 md:grid-cols-2">
+            <label>Nama keluarga (pilihan)<input name="familyName" maxLength={160} defaultValue={initial?.familyName}/></label>
             <label>
               Nama wakil
               <input
@@ -93,11 +95,10 @@ export function FamilyForm({ initial }: { initial?: Initial }) {
               />
             </label>
             <label>
-              Telefon
+              Telefon (jika tersedia)
               <input
                 name="wakilPhone"
                 type="tel"
-                required
                 minLength={8}
                 defaultValue={initial?.wakilPhone}
               />

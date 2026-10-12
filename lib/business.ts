@@ -155,7 +155,7 @@ export function buildMonthRows(input: {
     );
     let state: MonthState;
     if (!inFund) state = "BeforeJoin";
-    else if (month > current) state = "Upcoming";
+    else if (month > current && !settled) state = "Upcoming";
     else if (settled) state = "Paid";
     else if (closed && paid > 0) state = "Partial";
     else if (closed) state = "Overdue";
