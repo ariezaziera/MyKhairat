@@ -1,9 +1,22 @@
 import { sql } from "drizzle-orm";
-import { addMonths, assessFamily, isMonthClosed, listMonths, monthKey } from "./business";
+import {
+  addMonths,
+  assessFamily,
+  isMonthClosed,
+  listMonths,
+  monthKey,
+} from "./business";
 import { getDb } from "./db";
 import { nowIso, todayDate } from "./format";
 import { hashPassword } from "./passwords";
-import { families, memberRequests, members, payments, receipts, users } from "./schema";
+import {
+  families,
+  memberRequests,
+  members,
+  payments,
+  receipts,
+  users,
+} from "./schema";
 
 function receiptImage(title: string, amount: string, reference: string) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="860">
@@ -47,7 +60,9 @@ type SeedFamily = {
 
 export async function seedIfEmpty() {
   const database = getDb();
-  const existing = await database.select({ n: sql<number>`count(*)` }).from(users);
+  const existing = await database
+    .select({ n: sql<number>`count(*)` })
+    .from(users);
   if (Number(existing[0]?.n ?? 0) > 0) return { seeded: false };
 
   const now = new Date();
@@ -55,7 +70,9 @@ export async function seedIfEmpty() {
   const rate = 5;
   const current = monthKey(now);
   const joinedMonth = addMonths(current, -8);
-  const lastClosed = isMonthClosed(current, now, dueDay) ? current : addMonths(current, -1);
+  const lastClosed = isMonthClosed(current, now, dueDay)
+    ? current
+    : addMonths(current, -1);
   const closedMonths = listMonths(joinedMonth, lastClosed);
   const timestamp = nowIso();
   const passwordHash = hashPassword("Wakil@12345");
@@ -72,11 +89,36 @@ export async function seedIfEmpty() {
       rate,
       skipMonths: [],
       members: [
-        { id: "M1001", name: "Siti Aminah binti Rahman", status: "Aktif", relationship: "Wakil" },
-        { id: "M1002", name: "Ahmad bin Rahman", status: "Aktif", relationship: "Suami" },
-        { id: "M1003", name: "Nurul Izzah binti Ahmad", status: "Aktif", relationship: "Anak" },
-        { id: "M1004", name: "Adam bin Ahmad", status: "Aktif", relationship: "Anak" },
-        { id: "M1005", name: "Fatimah binti Rahman", status: "Tidak Aktif", relationship: "Ibu" },
+        {
+          id: "M1001",
+          name: "Siti Aminah binti Rahman",
+          status: "Aktif",
+          relationship: "Wakil",
+        },
+        {
+          id: "M1002",
+          name: "Ahmad bin Rahman",
+          status: "Aktif",
+          relationship: "Suami",
+        },
+        {
+          id: "M1003",
+          name: "Nurul Izzah binti Ahmad",
+          status: "Aktif",
+          relationship: "Anak",
+        },
+        {
+          id: "M1004",
+          name: "Adam bin Ahmad",
+          status: "Aktif",
+          relationship: "Anak",
+        },
+        {
+          id: "M1005",
+          name: "Fatimah binti Rahman",
+          status: "Tidak Aktif",
+          relationship: "Ibu",
+        },
       ],
     },
     {
@@ -90,9 +132,24 @@ export async function seedIfEmpty() {
       rate,
       skipMonths: [lastClosed],
       members: [
-        { id: "M2001", name: "Razak bin Osman", status: "Aktif", relationship: "Wakil" },
-        { id: "M2002", name: "Salmah binti Yusof", status: "Aktif", relationship: "Isteri" },
-        { id: "M2003", name: "Danish bin Razak", status: "Aktif", relationship: "Anak" },
+        {
+          id: "M2001",
+          name: "Razak bin Osman",
+          status: "Aktif",
+          relationship: "Wakil",
+        },
+        {
+          id: "M2002",
+          name: "Salmah binti Yusof",
+          status: "Aktif",
+          relationship: "Isteri",
+        },
+        {
+          id: "M2003",
+          name: "Danish bin Razak",
+          status: "Aktif",
+          relationship: "Anak",
+        },
       ],
     },
     {
@@ -106,11 +163,36 @@ export async function seedIfEmpty() {
       rate,
       skipMonths: closedMonths.slice(-3),
       members: [
-        { id: "M3001", name: "Hafizah binti Ali", status: "Aktif", relationship: "Wakil" },
-        { id: "M3002", name: "Kamal bin Hassan", status: "Aktif", relationship: "Suami" },
-        { id: "M3003", name: "Aisyah binti Kamal", status: "Aktif", relationship: "Anak" },
-        { id: "M3004", name: "Imran bin Kamal", status: "Aktif", relationship: "Anak" },
-        { id: "M3005", name: "Sofea binti Kamal", status: "Aktif", relationship: "Anak" },
+        {
+          id: "M3001",
+          name: "Hafizah binti Ali",
+          status: "Aktif",
+          relationship: "Wakil",
+        },
+        {
+          id: "M3002",
+          name: "Kamal bin Hassan",
+          status: "Aktif",
+          relationship: "Suami",
+        },
+        {
+          id: "M3003",
+          name: "Aisyah binti Kamal",
+          status: "Aktif",
+          relationship: "Anak",
+        },
+        {
+          id: "M3004",
+          name: "Imran bin Kamal",
+          status: "Aktif",
+          relationship: "Anak",
+        },
+        {
+          id: "M3005",
+          name: "Sofea binti Kamal",
+          status: "Aktif",
+          relationship: "Anak",
+        },
       ],
     },
     {
@@ -125,8 +207,18 @@ export async function seedIfEmpty() {
       skipMonths: [],
       pendingMonth: current,
       members: [
-        { id: "M4001", name: "Noraini binti Musa", status: "Aktif", relationship: "Wakil" },
-        { id: "M4002", name: "Farid bin Musa", status: "Aktif", relationship: "Adik" },
+        {
+          id: "M4001",
+          name: "Noraini binti Musa",
+          status: "Aktif",
+          relationship: "Wakil",
+        },
+        {
+          id: "M4002",
+          name: "Farid bin Musa",
+          status: "Aktif",
+          relationship: "Adik",
+        },
       ],
     },
     {
@@ -140,12 +232,42 @@ export async function seedIfEmpty() {
       rate,
       skipMonths: closedMonths.slice(-2),
       members: [
-        { id: "M5001", name: "Ismail bin Hassan", status: "Aktif", relationship: "Wakil" },
-        { id: "M5002", name: "Rohaya binti Ahmad", status: "Aktif", relationship: "Isteri" },
-        { id: "M5003", name: "Haziq bin Ismail", status: "Aktif", relationship: "Anak" },
-        { id: "M5004", name: "Nadia binti Ismail", status: "Aktif", relationship: "Anak" },
-        { id: "M5005", name: "Puteri binti Ismail", status: "Aktif", relationship: "Anak" },
-        { id: "M5006", name: "Hakim bin Ismail", status: "Aktif", relationship: "Anak" },
+        {
+          id: "M5001",
+          name: "Ismail bin Hassan",
+          status: "Aktif",
+          relationship: "Wakil",
+        },
+        {
+          id: "M5002",
+          name: "Rohaya binti Ahmad",
+          status: "Aktif",
+          relationship: "Isteri",
+        },
+        {
+          id: "M5003",
+          name: "Haziq bin Ismail",
+          status: "Aktif",
+          relationship: "Anak",
+        },
+        {
+          id: "M5004",
+          name: "Nadia binti Ismail",
+          status: "Aktif",
+          relationship: "Anak",
+        },
+        {
+          id: "M5005",
+          name: "Puteri binti Ismail",
+          status: "Aktif",
+          relationship: "Anak",
+        },
+        {
+          id: "M5006",
+          name: "Hakim bin Ismail",
+          status: "Aktif",
+          relationship: "Anak",
+        },
       ],
     },
   ];
@@ -166,7 +288,11 @@ export async function seedIfEmpty() {
     const dues = family.activeCount * family.rate;
     const paymentLites = closedMonths
       .filter((month) => !family.skipMonths.includes(month))
-      .map((month) => ({ paymentMonthYear: month, amountPaid: dues, approvalStatus: "Approved" }));
+      .map((month) => ({
+        paymentMonthYear: month,
+        amountPaid: dues,
+        approvalStatus: "Approved",
+      }));
     const assessment = assessFamily({
       joinedMonth: family.joinedMonth,
       openingBalance: family.openingBalance,
@@ -214,28 +340,34 @@ export async function seedIfEmpty() {
       receiptId,
       familyId: family.familyId,
       contentType: "image/svg+xml",
-      imageData: receiptImage(family.wakilName, `RM ${dues.toFixed(2)}`, `KH-${family.familyId}`),
+      imageData: receiptImage(
+        family.wakilName,
+        `RM ${dues.toFixed(2)}`,
+        `KH-${family.familyId}`,
+      ),
       createdAt: timestamp,
     });
-    const paymentRows: (typeof payments.$inferInsert)[] = paymentLites.map((payment) => {
-      paymentNumber += 1;
-      return {
-        paymentId: `P${paymentNumber}`,
-        familyId: family.familyId,
-        paymentDate: `${payment.paymentMonthYear}-08`,
-        paymentMonthYear: payment.paymentMonthYear,
-        amountPaid: payment.amountPaid,
-        expectedAmount: dues,
-        transactionReference: `KH${family.familyId}${payment.paymentMonthYear.replace("-", "")}`,
-        receiptImageUrl: `/api/receipts/${receiptId}`,
-        approvalStatus: "Approved",
-        rejectionReason: null,
-        reviewedBy: "AJK Admin",
-        reviewedAt: timestamp,
-        submittedBy: `U${family.familyId}`,
-        createdAt: timestamp,
-      };
-    });
+    const paymentRows: (typeof payments.$inferInsert)[] = paymentLites.map(
+      (payment) => {
+        paymentNumber += 1;
+        return {
+          paymentId: `P${paymentNumber}`,
+          familyId: family.familyId,
+          paymentDate: `${payment.paymentMonthYear}-08`,
+          paymentMonthYear: payment.paymentMonthYear,
+          amountPaid: payment.amountPaid,
+          expectedAmount: dues,
+          transactionReference: `KH${family.familyId}${payment.paymentMonthYear.replace("-", "")}`,
+          receiptImageUrl: `/api/receipts/${receiptId}`,
+          approvalStatus: "Approved",
+          rejectionReason: null,
+          reviewedBy: "AJK Admin",
+          reviewedAt: timestamp,
+          submittedBy: `U${family.familyId}`,
+          createdAt: timestamp,
+        };
+      },
+    );
     if (family.familyId === "K001" && lastClosed) {
       paymentNumber += 1;
       paymentRows.push({
@@ -248,7 +380,8 @@ export async function seedIfEmpty() {
         transactionReference: "REJECTEDREF01",
         receiptImageUrl: `/api/receipts/${receiptId}`,
         approvalStatus: "Rejected",
-        rejectionReason: "Receipt amount does not match the transfer reference.",
+        rejectionReason:
+          "Receipt amount does not match the transfer reference.",
         reviewedBy: "AJK Admin",
         reviewedAt: timestamp,
         submittedBy: `U${family.familyId}`,

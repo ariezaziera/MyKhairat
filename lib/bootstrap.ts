@@ -8,11 +8,17 @@ import { seedIfEmpty } from "./seed-data";
 let boot: Promise<void> | null = null;
 
 function shouldSeed() {
-  return process.env.NODE_ENV !== "production" || process.env.SEED_DEMO === "true";
+  if (process.env.SEED_DEMO === "false") return false;
+  return (
+    process.env.SEED_DEMO === "true" ||
+    (process.env.NODE_ENV !== "production" &&
+      (process.env.TURSO_DATABASE_URL || "file:local.db").startsWith("file:"))
+  );
 }
 
 export function bootstrap() {
-  if (process.env.NEXT_PHASE === "phase-production-build") return Promise.resolve();
+  if (process.env.NEXT_PHASE === "phase-production-build")
+    return Promise.resolve();
   if (!boot) {
     boot = (async () => {
       await ensureSchema();
@@ -20,13 +26,25 @@ export function bootstrap() {
       const password = process.env.INITIAL_ADMIN_PASSWORD;
       if (email && password) {
         const db = getDb();
-        const existing = await db.select({ id: users.id }).from(users).where(sql`lower(${users.email}) = ${email}`);
+        const existing = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(sql`lower(${users.email}) = ${email}`);
         if (!existing.length) {
-          await db.insert(users).values({
-            id: randomUUID(), email, passwordHash: hashPassword(password),
-            name: "AJK Admin", role: "admin", familyId: null,
-            phone: null, active: 1, createdAt: new Date().toISOString(),
-          }).onConflictDoNothing();
+          await db
+            .insert(users)
+            .values({
+              id: randomUUID(),
+              email,
+              passwordHash: hashPassword(password),
+              name: "AJK Admin",
+              role: "admin",
+              familyId: null,
+              phone: null,
+              active: 1,
+              createdAt: new Date().toISOString(),
+            })
+            .onConflictDoNothing();
         }
       }
       if (shouldSeed()) await seedIfEmpty();

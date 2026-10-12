@@ -8,8 +8,11 @@ export default async function RequestsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-3xl font-semibold">Member requests</h1>
-        <p className="text-sm text-slate-500">Wakil can ask to add a dependent. Approving creates an Aktif member and recalculates dues.</p>
+        <h1 className="text-3xl font-semibold">Permohonan ahli</h1>
+        <p className="text-sm text-slate-500">
+          Wakil can ask to add a dependent. Approving creates an Aktif member
+          and recalculates dues.
+        </p>
       </div>
       {requests.length === 0 ? <Card>No requests yet.</Card> : null}
       <ul className="grid gap-3 lg:grid-cols-2">
@@ -20,9 +23,14 @@ export default async function RequestsPage() {
                 <div>
                   <p className="font-semibold">{request.memberName}</p>
                   <p className="text-sm text-slate-500">
-                    {request.familyId} · {request.wakilName} · {request.relationship}
+                    {request.familyId} · {request.wakilName} ·{" "}
+                    {request.relationship}
                   </p>
-                  {request.note ? <p className="mt-1 text-sm text-slate-600">{request.note}</p> : null}
+                  {request.note ? (
+                    <p className="mt-1 text-sm text-slate-600">
+                      {request.note}
+                    </p>
+                  ) : null}
                 </div>
                 <StatusPill status={request.status} />
               </div>

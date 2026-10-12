@@ -1,10 +1,10 @@
 "use client";
-
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
-import { PasswordInput } from "@/components/password-input";
-import { Button } from "@/components/ui";
-
+import { useState, type FormEvent } from "react";
+import { api } from "@/lib/client-api";
+import { Button, Card } from "@/components/ui";
+import { malaysiaMonth } from "@/lib/dates";
 type Initial = {
   familyId: string;
   wakilName: string;
@@ -15,107 +15,217 @@ type Initial = {
   openingBalance: number;
   notes: string;
 };
-
 export function FamilyForm({ initial }: { initial?: Initial }) {
   const router = useRouter();
-  const [error, setError] = useState("");
-  const [pending, setPending] = useState(false);
-  const editing = Boolean(initial);
-
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPending(true);
+  const [error, setError] = useState(""),
+    [busy, setBusy] = useState(false),
+    [created, setCreated] = useState<{
+      id: string;
+      username: string;
+      code: string;
+    } | null>(null);
+  async function save(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
     setError("");
-    const form = new FormData(event.currentTarget);
-    const payload = {
-      wakilName: form.get("wakilName"),
-      wakilPhone: form.get("wakilPhone"),
-      email: form.get("email"),
-      password: String(form.get("password") ?? ""),
-      familyStatus: form.get("familyStatus"),
-      joinedMonth: form.get("joinedMonth"),
-      openingBalance: Number(form.get("openingBalance") || 0),
-      notes: form.get("notes"),
-    };
-    const response = await fetch(editing ? `/api/families/${initial?.familyId}` : "/api/families", {
-      method: editing ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await response.json().catch(() => ({}));
-    setPending(false);
-    if (!response.ok) {
-      setError(data.error || "Could not save the family.");
-      return;
+    const f = new FormData(e.currentTarget);
+    try {
+      const data = await api<{
+        family: { familyId: string; username: string };
+        activationCode?: string;
+      }>(
+        initial ? "/api/families/" + initial.familyId : "/api/families",
+        initial ? "PUT" : "POST",
+        {
+          ...Object.fromEntries(f),
+          openingBalance: Number(f.get("openingBalance") || 0),
+        },
+      );
+      if (!initial) {
+        setCreated({
+          id: data.family.familyId,
+          username: data.family.username,
+          code: data.activationCode || "",
+        });
+      } else router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sambungan gagal.");
+    } finally {
+      setBusy(false);
     }
-    router.push(`/admin/families/${data.family.familyId}`);
-    router.refresh();
   }
-
-  async function remove() {
-    if (!initial || !confirm(`Delete ${initial.familyId} and its members, payments, and login?`)) return;
-    const response = await fetch(`/api/families/${initial.familyId}`, { method: "DELETE" });
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      setError(data.error || "Could not delete the family.");
-      return;
-    }
-    router.push("/admin/families");
-    router.refresh();
-  }
-
   return (
-    <form onSubmit={onSubmit} className="space-y-4 rounded-3xl bg-white p-5 shadow-card ring-1 ring-slate-200">
-      {error ? <p className="text-sm text-rose-600">{error}</p> : null}
-      <div className="grid gap-4 md:grid-cols-2">
-        <div>
-          <label htmlFor="wakilName">Representative name</label>
-          <input id="wakilName" name="wakilName" required defaultValue={initial?.wakilName} />
+    <Card>
+      {created ? (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Keluarga disediakan</h2>
+          <p>
+            Username: <strong>{created.username}</strong> · Password awal:
+            mykhairat
+          </p>
+          <p>
+            Kod pengaktifan:{" "}
+            <strong className="select-all font-mono">{created.code}</strong>
+          </p>
+          <p className="text-slate-600">
+            Berikan kod hanya kepada wakil sebenar. Sah7 hari. Wakil dikira
+            sebagai ahli sekali; tambah ahli keluarga yang lain selepas ini.
+          </p>
+          <Link href={"/admin/families/" + created.id} className="action-link">
+            Buka keluarga dan tambah ahli
+          </Link>
         </div>
-        <div>
-          <label htmlFor="wakilPhone">Phone</label>
-          <input id="wakilPhone" name="wakilPhone" required defaultValue={initial?.wakilPhone} />
-        </div>
-        <div>
-          <label htmlFor="email">Wakil email (optional)</label>
-          <input id="email" name="email" type="email" defaultValue={initial?.email?.endsWith("@wakil.invalid") ? "" : initial?.email} />
-        </div>
-        <div>
-          {editing ? <><label htmlFor="password">New password (optional)</label><PasswordInput id="password" name="password" minLength={6} /></> : <p className="text-sm text-slate-600">Username dijana daripada nama pertama. Password awal: <strong>mykhairat</strong>. Wakil wajib tukar password selepas login pertama.</p>}
-        </div>
-        <div>
-          <label htmlFor="joinedMonth">Joined month</label>
-          <input id="joinedMonth" name="joinedMonth" type="month" required defaultValue={initial?.joinedMonth} />
-          <p className="mt-1 text-xs text-slate-500">The month this family joined, including 2025. Months before this are not billed.</p>
-        </div>
-        <div>
-          <label htmlFor="openingBalance">Baki awal</label>
-          <input id="openingBalance" name="openingBalance" type="number" step="0.01" defaultValue={initial?.openingBalance ?? 0} />
-          <p className="mt-1 text-xs text-slate-500">Arrears already owed when the family was entered. Record old collections separately.</p>
-        </div>
-        <div>
-          <label htmlFor="familyStatus">Family status</label>
-          <select id="familyStatus" name="familyStatus" defaultValue={initial?.familyStatus ?? "Active"}>
-            <option>Active</option>
-            <option>Suspended</option>
-            <option>Inactive</option>
-          </select>
-        </div>
-      </div>
-      <div>
-        <label htmlFor="notes">Notes</label>
-        <textarea id="notes" name="notes" rows={3} defaultValue={initial?.notes} />
-      </div>
-      <div className="flex flex-wrap gap-3">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Saving..." : editing ? "Save changes" : "Create family"}
-        </Button>
-        {editing ? (
-          <Button type="button" variant="danger" onClick={remove}>
-            Delete family
-          </Button>
-        ) : null}
-      </div>
-    </form>
+      ) : (
+        <form onSubmit={save} className="space-y-5">
+          {error && (
+            <p role="alert" className="text-rose-700">
+              {error}
+            </p>
+          )}
+          <div className="grid gap-4 md:grid-cols-2">
+            <label>
+              Nama wakil
+              <input
+                name="wakilName"
+                required
+                minLength={2}
+                defaultValue={initial?.wakilName}
+              />
+            </label>
+            <label>
+              Telefon
+              <input
+                name="wakilPhone"
+                type="tel"
+                required
+                minLength={8}
+                defaultValue={initial?.wakilPhone}
+              />
+            </label>
+            <label>
+              Email wakil (pilihan)
+              <input
+                name="email"
+                type="email"
+                defaultValue={
+                  initial?.email.endsWith("@wakil.invalid")
+                    ? ""
+                    : initial?.email
+                }
+              />
+            </label>
+            <label>
+              Bulan menyertai
+              <input
+                name="joinedMonth"
+                type="month"
+                max={malaysiaMonth()}
+                required
+                readOnly={Boolean(initial)}
+                defaultValue={initial?.joinedMonth || malaysiaMonth()}
+              />
+              <span className="mt-1 block text-sm text-slate-600">
+                Tarikh asal keahlian, termasuk tahun2025. Sejarah lama perlu
+                disahkan.
+              </span>
+            </label>
+            <label>
+              Baki asal keluarga (+ hutang / − kredit)
+              <input
+                name="openingBalance"
+                type="number"
+                step="0.01"
+                defaultValue={initial?.openingBalance || 0}
+              />
+              <span className="mt-1 block text-sm text-slate-600">
+                Jangan masukkan hutang bulan yang turut dikira dalam sejarah.
+                Gunakan tarikh mula kiraan jika mengambil baki cutover.
+              </span>
+            </label>
+            {!initial && (
+              <label>
+                Bulan mula kiraan dalam sistem (pilihan)
+                <input
+                  name="billingStartMonth"
+                  type="month"
+                  max={malaysiaMonth()}
+                />
+                <span className="mt-1 block text-sm text-slate-600">
+                  Jika menggunakan baki cutover, mula kira selepas bulan yang
+                  termasuk dalam baki asal.
+                </span>
+              </label>
+            )}
+            <label>
+              Status
+              <select
+                name="familyStatus"
+                defaultValue={initial?.familyStatus || "Active"}
+              >
+                <option value="Active">Aktif</option>
+                <option value="Suspended">
+                  Digantung (dikira daripada tunggakan disahkan)
+                </option>
+                <option value="Inactive">Tidak aktif</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            Catatan / sebab pelarasan
+            <textarea
+              name="notes"
+              rows={3}
+              maxLength={500}
+              defaultValue={initial?.notes}
+            />
+          </label>
+          <p className="text-sm text-slate-600">
+            Akses wakil disediakan secara automatik. Portal pilihan; resit boleh
+            terus dihantar melalui WhatsApp. Reset password dibuat dalam Akaun &
+            kuasa.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Button disabled={busy}>
+              {busy
+                ? "Menyimpan…"
+                : initial
+                  ? "Simpan keluarga"
+                  : "Daftar keluarga"}
+            </Button>
+            {initial && (
+              <Button
+                type="button"
+                variant="danger"
+                disabled={busy}
+                onClick={async () => {
+                  if (
+                    !confirm(
+                      "Padam keluarga kosong " +
+                        initial.familyId +
+                        "? Rekod kewangan tidak boleh dipadam.",
+                    )
+                  )
+                    return;
+                  setBusy(true);
+                  try {
+                    await api("/api/families/" + initial.familyId, "DELETE");
+                    router.push("/admin/families");
+                    router.refresh();
+                  } catch (e) {
+                    setError(
+                      e instanceof Error ? e.message : "Sambungan gagal.",
+                    );
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Padam keluarga kosong
+              </Button>
+            )}
+          </div>
+        </form>
+      )}
+    </Card>
   );
 }

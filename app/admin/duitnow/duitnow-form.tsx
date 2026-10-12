@@ -1,95 +1,138 @@
 "use client";
-
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Button, Card } from "@/components/ui";
-
-export function DuitnowForm({ duitnowId, hasImage }: { duitnowId: string; hasImage: boolean }) {
-  const router = useRouter();
-  const [preview, setPreview] = useState(hasImage ? `/api/duitnow/qr?t=${Date.now()}` : "");
-  const [removeImage, setRemoveImage] = useState(false);
-  const [error, setError] = useState("");
-  const [saved, setSaved] = useState(false);
-  const [pending, setPending] = useState(false);
-
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPending(true);
+import { api } from "@/lib/client-api";
+export function DuitnowForm({
+  duitnowId,
+  hasImage,
+}: {
+  duitnowId: string;
+  hasImage: boolean;
+}) {
+  const router = useRouter(),
+    [preview, setPreview] = useState(hasImage ? "/api/duitnow/qr" : ""),
+    [remove, setRemove] = useState(false),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [message, setMessage] = useState("");
+  useEffect(
+    () => () => {
+      if (preview.startsWith("blob:")) URL.revokeObjectURL(preview);
+    },
+    [preview],
+  );
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
     setError("");
-    setSaved(false);
-    const form = new FormData(event.currentTarget);
-    const file = form.get("qr");
-    let dataUrl = "";
-    if (file instanceof File && file.size > 0) {
-      dataUrl = await readFile(file);
+    try {
+      const f = new FormData(e.currentTarget),
+        file = f.get("qr");
+      let dataUrl = "";
+      if (file instanceof File && file.size) {
+        if (
+          file.size > 2_000_000 ||
+          !["image/png", "image/jpeg", "image/webp"].includes(file.type)
+        )
+          throw new Error("Pilih PNG/JPG/WebP bawah2MB.");
+        dataUrl = await new Promise<string>((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(String(r.result));
+          r.onerror = () => reject(new Error("Fail tidak dapat dibaca."));
+          r.readAsDataURL(file);
+        });
+      }
+      const data = await api<{ hasDuitnowQr: boolean }>(
+        "/api/settings/duitnow",
+        "PUT",
+        {
+          duitnowId: f.get("id") || "",
+          dataUrl,
+          removeImage: remove && !dataUrl,
+        },
+      );
+      setPreview(data.hasDuitnowQr ? "/api/duitnow/qr?t=" + Date.now() : "");
+      setRemove(false);
+      setMessage(
+        "QR dan ID DuitNow disimpan. Semak penerima sebelum memberi arahan bayaran.",
+      );
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sambungan gagal.");
+    } finally {
+      setBusy(false);
     }
-    const response = await fetch("/api/settings/duitnow", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        duitnowId: String(form.get("duitnowId") ?? ""),
-        dataUrl,
-        removeImage: removeImage && !dataUrl,
-      }),
-    });
-    const data = await response.json().catch(() => ({}));
-    setPending(false);
-    if (!response.ok) {
-      setError(data.error || "Could not save the DuitNow QR.");
-      return;
-    }
-    setSaved(true);
-    setRemoveImage(false);
-    setPreview(data.hasDuitnowQr ? `/api/duitnow/qr?t=${Date.now()}` : "");
-    router.refresh();
   }
-
   return (
-    <form onSubmit={onSubmit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <Card className="space-y-4">
-        {error ? <p className="rounded-2xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
-        {saved ? <p className="rounded-2xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">DuitNow details saved. Families can scan this code on the payment page.</p> : null}
-        <div>
-          <label htmlFor="duitnowId">DuitNow ID</label>
-          <input id="duitnowId" name="duitnowId" defaultValue={duitnowId} placeholder="Phone number or business ID" />
-          <p className="mt-1 text-xs text-slate-500">Shown next to the QR so a wakil can type it if the scan fails.</p>
+    <form onSubmit={submit} className="grid gap-5 lg:grid-cols-[1.3fr_1fr]">
+      <Card>
+        <h2 className="text-xl font-semibold">Maklumat DuitNow</h2>
+        {error && (
+          <p role="alert" className="mt-4 text-rose-700">
+            {error}
+          </p>
+        )}
+        {message && (
+          <p role="status" className="mt-4 text-green-800">
+            {message}
+          </p>
+        )}
+        <label className="mt-5">
+          ID DuitNow
+          <input name="id" defaultValue={duitnowId} maxLength={40} />
+        </label>
+        <label className="mt-5">
+          Imej QR daripada bank
+          <input
+            name="qr"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                setRemove(false);
+                setPreview(URL.createObjectURL(file));
+              }
+            }}
+          />
+        </label>
+        <div className="mt-5 flex flex-wrap gap-3">
+          {preview && !remove && (
+            <Button
+              variant="danger"
+              type="button"
+              onClick={() => setRemove(true)}
+            >
+              Buang QR
+            </Button>
+          )}
+          <Button disabled={busy}>
+            {busy ? "Menyimpan…" : "Simpan DuitNow"}
+          </Button>
         </div>
-        <div>
-          <label htmlFor="qr">QR image</label>
-          <input id="qr" name="qr" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (!file) return;
-            setRemoveImage(false);
-            setPreview(URL.createObjectURL(file));
-          }} />
-        </div>
-        {preview && !removeImage ? (
-          <button type="button" className="text-sm font-semibold text-rose-600" onClick={() => setRemoveImage(true)}>
-            Remove current QR
-          </button>
-        ) : null}
-        {removeImage ? <p className="text-sm text-amber-700">The QR will be removed when you save.</p> : null}
-        <Button type="submit" className="sm:w-fit" disabled={pending}>
-          {pending ? "Saving..." : "Save DuitNow QR"}
-        </Button>
+        {remove && (
+          <p className="mt-3 text-amber-900">
+            QR akan dibuang selepas menyimpan.
+          </p>
+        )}
       </Card>
       <Card>
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Preview</p>
-        {preview && !removeImage ? (
-          <img src={preview} alt="DuitNow QR preview" className="mt-3 w-full rounded-2xl bg-slate-50 object-contain" />
+        <h2 className="text-xl font-semibold">Preview penerima</h2>
+        {preview && !remove ? (
+          <img
+            src={preview}
+            alt="Preview QR DuitNow yang akan digunakan keluarga"
+            className="mx-auto mt-5 w-full max-w-72"
+          />
         ) : (
-          <p className="mt-3 text-sm text-slate-500">No QR yet. Upload the Maybank or DuitNow merchant code families should scan.</p>
+          <p className="mt-5 text-slate-600">QR belum disediakan.</p>
         )}
+        <p className="mt-4 text-sm text-slate-600">
+          Gunakan imej asal yang jelas. Pastikan QR milik akaun dana keluarga,
+          bukan akaun peribadi yang salah.
+        </p>
       </Card>
     </form>
   );
-}
-
-function readFile(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Could not read the image."));
-    reader.readAsDataURL(file);
-  });
 }

@@ -13,3 +13,11 @@ next-env.d.ts
 npm-debug.log*
 .DS_Store
 coverage
+
+.data-key-upload.tmp
+.test-upgrade-backup.json
+backups/
+
+.secret-*.tmp
+
+cookies.txt

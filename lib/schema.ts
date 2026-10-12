@@ -1,6 +1,7 @@
 import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const settings = sqliteTable("settings", {
+  bankVerified: integer("bank_verified").notNull().default(0),
   id: integer("id").primaryKey(),
   baseRatePerMember: real("base_rate_per_member").notNull(),
   paymentDueDay: integer("payment_due_day").notNull(),
@@ -14,9 +15,14 @@ export const settings = sqliteTable("settings", {
   deathPayoutAmount: real("death_payout_amount").notNull().default(2000),
   wardedPayoutAmount: real("warded_payout_amount").notNull().default(200),
   updatedAt: text("updated_at").notNull(),
+  supportPhone: text("support_phone").notNull().default(""),
+  agreementMonth: text("agreement_month"),
 });
 
 export const families = sqliteTable("families", {
+  registrationComplete: integer("registration_complete").notNull().default(1),
+  externalId: text("external_id"),
+  billingStartMonth: text("billing_start_month"),
   familyId: text("family_id").primaryKey(),
   wakilName: text("wakil_name").notNull(),
   wakilPhone: text("wakil_phone").notNull(),
@@ -29,6 +35,10 @@ export const families = sqliteTable("families", {
 });
 
 export const users = sqliteTable("users", {
+  accessProfile: text("access_profile").notNull().default("owner"),
+  activationHash: text("activation_hash"),
+  activationExpires: text("activation_expires"),
+  activationRequired: integer("activation_required").notNull().default(0),
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
@@ -44,6 +54,9 @@ export const users = sqliteTable("users", {
 });
 
 export const members = sqliteTable("members", {
+  externalId: text("external_id"),
+  billingStartMonth: text("billing_start_month"),
+  billingEndMonth: text("billing_end_month"),
   memberId: text("member_id").primaryKey(),
   familyId: text("family_id").notNull(),
   memberName: text("member_name").notNull(),
@@ -101,6 +114,17 @@ export const activityLog = sqliteTable("activity_log", {
 });
 
 export const claims = sqliteTable("claims", {
+  status: text("status").notNull().default("Submitted"),
+  recipientName: text("recipient_name"),
+  recipientAccount: text("recipient_account"),
+  evidenceUrl: text("evidence_url"),
+  reviewedBy: text("reviewed_by"),
+  reviewedAt: text("reviewed_at"),
+  paidDate: text("paid_date"),
+  payoutReference: text("payout_reference"),
+  eventKey: text("event_key"),
+  policyAmount: real("policy_amount"),
+  exceptionReason: text("exception_reason"),
   claimId: text("claim_id").primaryKey(),
   familyId: text("family_id").notNull(),
   memberId: text("member_id").notNull(),

@@ -1,42 +1,50 @@
 "use client";
-
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui";
-
+import { api } from "@/lib/client-api";
+import { useAdminPermission } from "@/components/admin-permissions";
 export function RequestActions({ requestId }: { requestId: string }) {
-  const router = useRouter();
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function decide(decision: "Approved" | "Rejected") {
+  const router = useRouter(),
+    allowed = useAdminPermission("families"),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  async function act(decision: string) {
     setBusy(true);
-    setError("");
-    const response = await fetch(`/api/member-requests/${requestId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ decision }),
-    });
-    const data = await response.json().catch(() => ({}));
-    setBusy(false);
-    if (!response.ok) {
-      setError(data.error || "Could not update the request.");
-      return;
+    try {
+      await api("/api/member-requests/" + requestId, "PATCH", { decision });
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sambungan gagal.");
+    } finally {
+      setBusy(false);
     }
-    router.refresh();
   }
-
   return (
-    <div className="flex flex-col items-end gap-2">
-      {error ? <p className="text-xs text-rose-600">{error}</p> : null}
-      <div className="flex gap-2">
-        <Button type="button" variant="ghost" disabled={busy} onClick={() => decide("Rejected")}>
-          Reject
-        </Button>
-        <Button type="button" variant="green" disabled={busy} onClick={() => decide("Approved")}>
-          Approve
-        </Button>
-      </div>
+    <div className="space-y-3">
+      {error && (
+        <p role="alert" className="text-rose-700">
+          {error}
+        </p>
+      )}
+      {allowed && (
+        <div className="flex flex-wrap gap-3">
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onClick={() => void act("Rejected")}
+          >
+            Tolak
+          </Button>
+          <Button
+            variant="green"
+            disabled={busy}
+            onClick={() => void act("Approved")}
+          >
+            Luluskan ahli
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

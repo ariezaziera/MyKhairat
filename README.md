@@ -1,76 +1,34 @@
-MyKhairat: Sistem Dana Kita
-MyKhairat is a digital management system designed to streamline and automate the administration of community Khairat Kematian (death benefit) funds. It transitions traditional manual ledger tracking into a modern, centralized, and self-service application built entirely within the Google Workspace ecosystem.
+# MyKhairat — Sistem Dana Kita
 
-📖 Overview
-Many local communities manage their Khairat Kematian funds using manual spreadsheets and WhatsApp message receipts, leading to administrative friction, calculation errors, and difficulty in tracking arrears.
+Sistem khairat keluarga dengan caruman bulanan per kepala, bantuan kematian dan kemasukan wad kritikal. Aliran utama: wakil hantar resit di WhatsApp → AJK rekod → pelulus semak. Portal wakil disediakan sebagai akses pilihan.
 
-MyKhairat solves this by providing a two-sided platform:
+## Teknologi
 
-For System Admins (AJK): A centralized dashboard to verify payments, manage member statuses, and automatically track overdue accounts without manual data entry.
+Next.js App Router · TypeScript · Tailwind CSS · Turso SQLite / libSQL · GitHub · Vercel.
 
-For Family Representatives (Wakil): A self-service portal to view their active dependents, check their dynamically calculated monthly dues, and upload payment receipts directly.
+## Modul
 
-✨ Key Features
-Automated Dues Calculation: The system automatically calculates monthly contribution rates based on the number of Active members in a specific family.
+- Direktori keluarga/ahli, import Excel/CSV dengan preview dan akaun wakil automatik.
+- Resit WhatsApp/manual, kelulusan atomik dan rujukan unik.
+- Snapshot caruman bulanan, kredit, tunggakan dan pengesahan sejarah2025.
+- Ledger dana, baki bank asal, perbelanjaan/derma/pelarasan dan rekonsiliasi.
+- Tuntutan kematian/wad: permohonan, semakan, kelulusan dan bukti payout.
+- Kuasa owner/bendahari/pelulus/auditor, wakil ganti dan reset dengan kod pengaktifan.
+- IC terenkripsi/tersamar, audit, PDF, backup manual/harian terenkripsi dan restore ke database kosong.
+- UI Bahasa Melayu, ilustrasi SVG/CSS3D, reduced motion, teks besar dan layout responsif.
 
-Streamlined Payment Verification: A split-screen admin dashboard allows AJK to view submitted payment details alongside the uploaded digital receipt (Bukti Pembayaran) for one-click approval.
+## Jalankan secara lokal
 
-Automated Arrears Tracking: Identifies families who have missed the payment deadline (e.g., 10th of the month) and flags their account status as "Tertunggak".
+1. npm install
+2. Salin .env.example ke .env.local dan tetapkan kunci. Untuk development berasingan, gunakan TURSO_DATABASE_URL=file:local.db; SEED_DEMO=true jika mahu rekod demo.
+3. npm run dev
 
-Role-Based Access Control: Wakil can only view and edit data pertaining to their specific Family_ID, ensuring data privacy and security.
+Production menggunakan Turso URL/token, AUTH_SECRET dan DATA_ENCRYPTION_KEY yang stabil. Cron memerlukan CRON_SECRET dan BACKUP_PASSPHRASE. Migrations tambahan berjalan idempotently semasa startup; demo tidak diisi ke Turso remote secara default.
 
-Zero-Code Infrastructure: Built on cost-effective, existing Google Workspace tools, requiring no external server hosting or subscription fees for the community.
+## Operasi
 
-🛠️ Tech Stack
-Frontend (User Interface): Google AppSheet (Mobile & Web App)
+Baca [OPERATIONS.md](./OPERATIONS.md) untuk cutover, pengesahan sejarah, akaun, polisi, backup dan restore. Baca [ONBOARDING.md](./ONBOARDING.md) untuk format import. Keperluan pengguna terkini mengatasi bahagian AppSheet/Google lama dalam PROMPT_SYSTEM.md.
 
-Backend (Database): Google Sheets
+## Semakan
 
-File Storage: Google Drive (for digital receipts/images)
-
-Automation (Future Scope): Google Apps Script / AppSheet Bots (for automated WhatsApp/Email reminders)
-
-🗄️ Database Architecture
-The system relies on a normalized Google Sheets database with the following core tables:
-
-Settings: Global configuration variables (e.g., Base Rate per Member, Due Dates).
-
-Families (Family_ID): Master record of registered families and their primary representative (Wakil).
-
-Members (Member_ID): Relational list of all dependents tied to a Family ID and their active/inactive status.
-
-Payments (Payment_ID): Transaction log tracking monthly submissions, image URLs, and approval statuses.
-
-🚀 Getting Started (Deployment Guide)
-To deploy the MyKhairat MVP for your community:
-
-Database Setup:
-
-Copy the master Google Sheet template containing the Settings, Families, Members, and Payments tabs.
-
-Ensure there is a dedicated Google Drive folder named Bukti Pembayaran in the same directory as the spreadsheet.
-
-AppSheet Generation:
-
-Open the Google Sheet.
-
-Navigate to Extensions > AppSheet > Create an app.
-
-AppSheet will automatically generate the base UI based on your tables.
-
-Configure Data Types & Linking:
-
-In the AppSheet editor, set the Bukti_File column in the Payments table to the Image or File data type.
-
-Ensure Family_Members and Family_Payments_Log are set as references (Ref) to the Families table using Family_ID.
-
-Design Views:
-
-Create the Admin Views (Pending Approvals, Master Directory, Arrears Report) and set their display conditions to only show for Admin emails.
-
-Create the Wakil Views (Family Profile, Submit Payment, Payment Ledger) and filter the data using [Email] = USEREMAIL().
-
-📂 Repository Contents
-PROMPT_SYSTEM.md: Contains the comprehensive system architecture, UI/UX wireframe prompts, and business rules for the project.
-
-README.md: Project documentation and setup guide.
+npm run lint · npm run test:rules · npm run test:onboarding (database disposable) · npm run build.

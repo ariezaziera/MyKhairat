@@ -1,3 +1,5 @@
+import { malaysiaDate, malaysiaMonth, shiftMonth } from "./dates";
+import type { BillingSnapshot } from "./finance";
 export type PaymentLite = {
   paymentMonthYear: string;
   amountPaid: number;
@@ -5,7 +7,14 @@ export type PaymentLite = {
   expectedAmount?: number;
 };
 
-export type MonthState = "BeforeJoin" | "Upcoming" | "Paid" | "Partial" | "Overdue" | "Due" | "Pending";
+export type MonthState =
+  | "BeforeJoin"
+  | "Upcoming"
+  | "Paid"
+  | "Partial"
+  | "Overdue"
+  | "Due"
+  | "Pending";
 
 export type MonthRow = {
   month: string;
@@ -16,9 +25,12 @@ export type MonthRow = {
   overdue: boolean;
   hasPending: boolean;
   state: MonthState;
+  confirmed: boolean;
+  creditApplied: number;
 };
 
 export type Assessment = {
+  historyNeedsReview: number;
   activeCount: number;
   monthlyDues: number;
   months: MonthRow[];
@@ -34,12 +46,11 @@ export type Assessment = {
 };
 
 export function monthKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  return malaysiaMonth(date);
 }
 
 export function addMonths(month: string, delta: number) {
-  const [year, mon] = month.split("-").map(Number);
-  return monthKey(new Date(year, mon - 1 + delta, 1));
+  return shiftMonth(month, delta);
 }
 
 export function round2(value: number) {
@@ -54,7 +65,7 @@ export function isMonthClosed(month: string, now: Date, dueDay: number) {
   const current = monthKey(now);
   if (month < current) return true;
   if (month > current) return false;
-  return now.getDate() > dueDay;
+  return Number(malaysiaDate(now).slice(8)) > dueDay;
 }
 
 export function listMonths(from: string, to: string) {
@@ -75,24 +86,72 @@ export function buildMonthRows(input: {
   activeCount: number;
   rate: number;
   payments: PaymentLite[];
+  snapshots?: BillingSnapshot[];
+  openingBalance?: number;
   now: Date;
   dueDay: number;
 }): MonthRow[] {
   const dues = expectedAmount(input.activeCount, input.rate);
   const current = monthKey(input.now);
+  const snapshotMap = new Map(
+    input.snapshots?.map((row) => [row.month, row]) ?? [],
+  );
+  let credit = Math.max(0, -(input.openingBalance ?? 0));
+  const totals = new Map<string, number>();
+  for (const p of input.payments.filter(
+    (p) => p.approvalStatus === "Approved" && p.paymentMonthYear <= current,
+  ))
+    totals.set(
+      p.paymentMonthYear,
+      (totals.get(p.paymentMonthYear) ?? 0) + p.amountPaid,
+    );
+  for (const [month, paid] of totals) {
+    const expected =
+      snapshotMap.get(month)?.expected ??
+      input.payments
+        .filter(
+          (p) =>
+            p.paymentMonthYear === month && p.approvalStatus === "Approved",
+        )
+        .reduce((n, p) => Math.max(n, p.expectedAmount ?? dues), 0);
+    credit += Math.max(0, paid - expected);
+  }
   return listMonths(input.fromMonth, input.toMonth).map((month) => {
     const inFund = month >= input.joinedMonth;
     const approved = input.payments.filter(
-      (payment) => payment.paymentMonthYear === month && payment.approvalStatus === "Approved",
+      (payment) =>
+        payment.paymentMonthYear === month &&
+        payment.approvalStatus === "Approved",
     );
-    const paid = round2(approved.reduce((sum, payment) => sum + payment.amountPaid, 0));
-    const billed = approved.reduce((highest, payment) => Math.max(highest, payment.expectedAmount ?? dues), 0);
-    const expected = !inFund ? 0 : approved.length ? round2(billed) : dues;
-    const outstanding = inFund ? round2(Math.max(0, expected - paid)) : 0;
+    const paid = round2(
+      approved.reduce((sum, payment) => sum + payment.amountPaid, 0),
+    );
+    const billed = approved.reduce(
+      (highest, payment) => Math.max(highest, payment.expectedAmount ?? dues),
+      0,
+    );
+    const snapshot = snapshotMap.get(month);
+    const expected = !inFund
+      ? 0
+      : (snapshot?.expected ?? (approved.length ? round2(billed) : dues));
+    const creditApplied =
+      month <= current && inFund
+        ? round2(Math.min(credit, Math.max(0, expected - paid)))
+        : 0;
+    credit = round2(credit - creditApplied);
+    const outstanding = inFund
+      ? round2(Math.max(0, expected - paid - creditApplied))
+      : 0;
     const settled = inFund && outstanding <= 0.001;
-    const closed = isMonthClosed(month, input.now, input.dueDay);
+    const closed = isMonthClosed(
+      month,
+      input.now,
+      snapshot?.dueDay ?? input.dueDay,
+    );
     const hasPending = input.payments.some(
-      (payment) => payment.paymentMonthYear === month && payment.approvalStatus === "Pending",
+      (payment) =>
+        payment.paymentMonthYear === month &&
+        payment.approvalStatus === "Pending",
     );
     let state: MonthState;
     if (!inFund) state = "BeforeJoin";
@@ -111,6 +170,8 @@ export function buildMonthRows(input: {
       overdue: inFund && closed && !settled,
       hasPending,
       state,
+      confirmed: snapshot?.confirmed ?? true,
+      creditApplied,
     };
   });
 }
@@ -122,12 +183,15 @@ export function assessFamily(input: {
   activeCount: number;
   rate: number;
   payments: PaymentLite[];
+  snapshots?: BillingSnapshot[];
   now?: Date;
   dueDay: number;
 }): Assessment {
   const now = input.now ?? new Date();
   const current = monthKey(now);
-  const monthlyDues = expectedAmount(input.activeCount, input.rate);
+  const monthlyDues =
+    input.snapshots?.find((row) => row.month === current)?.expected ??
+    expectedAmount(input.activeCount, input.rate);
   const months = buildMonthRows({
     joinedMonth: input.joinedMonth,
     fromMonth: input.joinedMonth,
@@ -135,15 +199,19 @@ export function assessFamily(input: {
     activeCount: input.activeCount,
     rate: input.rate,
     payments: input.payments,
+    snapshots: input.snapshots,
+    openingBalance: input.openingBalance,
     now,
     dueDay: input.dueDay,
   });
   const byMonth = new Map(months.map((row) => [row.month, row]));
-  const closed = listMonths(input.joinedMonth, current).filter((month) => isMonthClosed(month, now, input.dueDay));
+  const closed = listMonths(input.joinedMonth, current).filter((month) =>
+    isMonthClosed(month, now, input.dueDay),
+  );
   let consecutiveUnpaid = 0;
   for (let index = closed.length - 1; index >= 0; index -= 1) {
     const row = byMonth.get(closed[index]);
-    if (!row || row.settled) break;
+    if (!row || row.settled || !row.confirmed) break;
     consecutiveUnpaid += 1;
   }
   const approvedTotal = round2(
@@ -155,7 +223,8 @@ export function assessFamily(input: {
   const bakiAwal = round2(input.openingBalance);
   const bakiSemasa = round2(bakiAwal + accrued - approvedTotal);
   const currentRow = months.find((row) => row.month === current);
-  const notYetOverdue = currentRow && !currentRow.overdue ? currentRow.outstanding : 0;
+  const notYetOverdue =
+    currentRow && !currentRow.overdue ? currentRow.outstanding : 0;
   const arrearsAmount = round2(Math.max(0, bakiSemasa - notYetOverdue));
   const overdueMonths = months.filter((row) => row.overdue);
   let suggestedStatus: Assessment["suggestedStatus"];
@@ -163,6 +232,7 @@ export function assessFamily(input: {
   else if (consecutiveUnpaid >= 3) suggestedStatus = "Suspended";
   else suggestedStatus = "Active";
   return {
+    historyNeedsReview: months.filter((row) => !row.confirmed).length,
     activeCount: input.activeCount,
     monthlyDues,
     months,
@@ -182,16 +252,23 @@ export function memberEligibility(memberStatus: string, familyStatus: string) {
   if (familyStatus === "Suspended") {
     return {
       eligible: false,
-      reason: "Family is Suspended after 3 consecutive unpaid months, so members cannot receive a death or warded claim.",
+      reason:
+        "Keluarga digantung selepas 3 bulan tertunggak berturut-turut. Hubungi AJK untuk semakan.",
     };
   }
   if (familyStatus !== "Active") {
-    return { eligible: false, reason: "Family is inactive and cannot receive a claim." };
+    return { eligible: false, reason: "Keluarga tidak aktif." };
   }
   if (memberStatus !== "Aktif") {
-    return { eligible: false, reason: "Only members listed as Aktif can receive a claim." };
+    return {
+      eligible: false,
+      reason: "Hanya ahli Aktif boleh memohon bantuan.",
+    };
   }
-  return { eligible: true, reason: "Eligible for khairat kematian or a critical warded claim." };
+  return {
+    eligible: true,
+    reason: "Tertakluk semakan kelayakan pada tarikh kejadian.",
+  };
 }
 
 export function whatsappHref(phone: string, message: string) {

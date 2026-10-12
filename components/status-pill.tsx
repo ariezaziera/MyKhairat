@@ -1,4 +1,23 @@
+const labels: Record<string, string> = {
+  Pending: "Menunggu semakan",
+  Approved: "Diluluskan",
+  Rejected: "Ditolak",
+  Active: "Aktif",
+  Suspended: "Digantung",
+  Inactive: "Tidak aktif",
+  Paid: "Selesai",
+  Overdue: "Tertunggak",
+  Partial: "Sebahagian",
+  Due: "Belum selesai",
+  Upcoming: "Akan datang",
+  Submitted: "Diterima",
+  Reviewed: "Disemak",
+  NeedsReview: "Perlu pengesahan",
+};
 const styles: Record<string, string> = {
+  Submitted: "bg-blue-50 text-blue-800 ring-blue-200",
+  Reviewed: "bg-amber-50 text-amber-800 ring-amber-200",
+  NeedsReview: "bg-amber-50 text-amber-800 ring-amber-200",
   Pending: "bg-amber-50 text-amber-800 ring-amber-200",
   Approved: "bg-emerald-50 text-emerald-800 ring-emerald-200",
   Rejected: "bg-rose-50 text-rose-700 ring-rose-200",
@@ -17,8 +36,10 @@ const styles: Record<string, string> = {
 
 export function StatusPill({ status }: { status: string }) {
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${styles[status] ?? styles.Inactive}`}>
-      {status === "BeforeJoin" ? "—" : status}
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-sm font-semibold ring-1 ring-inset ${styles[status] ?? styles.Inactive}`}
+    >
+      {status === "BeforeJoin" ? "—" : (labels[status] ?? status)}
     </span>
   );
 }

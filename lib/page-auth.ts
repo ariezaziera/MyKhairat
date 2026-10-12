@@ -1,3 +1,4 @@
+import { can, type Permission } from "./permissions";
 import { redirect } from "next/navigation";
 import { accountIsActive } from "./queries";
 import { getSession } from "./session";
@@ -8,14 +9,19 @@ async function activeSession() {
   if (!session) redirect("/login");
   if (!(await accountIsActive(session.sub))) redirect("/api/auth/disabled");
   let verified;
-  try { verified = await requireSession(true); } catch { redirect("/login"); }
+  try {
+    verified = await requireSession(true);
+  } catch {
+    redirect("/login");
+  }
   if (verified.mustChangePassword) redirect("/change-password");
   return verified;
 }
 
-export async function requireAdminPage() {
+export async function requireAdminPage(permission: Permission = "read") {
   const session = await activeSession();
   if (session.role !== "admin") redirect("/app");
+  if (!can(session.accessProfile, permission)) redirect("/admin");
   return session;
 }
 

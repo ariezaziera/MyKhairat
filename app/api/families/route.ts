@@ -14,10 +14,19 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin();
-    const parsed = familyCreateSchema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) return json({ error: parsed.error.issues[0]?.message ?? "Invalid family." }, 400);
-    const bundle = await createFamily({ ...parsed.data, notes: parsed.data.notes || undefined });
+    const session = await requireAdmin("families");
+    const parsed = familyCreateSchema.safeParse(
+      await request.json().catch(() => null),
+    );
+    if (!parsed.success)
+      return json(
+        { error: parsed.error.issues[0]?.message ?? "Invalid family." },
+        400,
+      );
+    const bundle = await createFamily(
+      { ...parsed.data, notes: parsed.data.notes || undefined },
+      session,
+    );
     return json(bundle, 201);
   } catch (error) {
     return errorResponse(error);

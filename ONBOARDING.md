@@ -29,3 +29,7 @@ Senarai username boleh dimuat turun sebagai CSV selepas import. Transaksi dan ba
 `npm run test:rules` memeriksa pengiraan caruman, pengumpulan ahli dari baris/kolum Excel dan username pendua.
 
 `npm run test:onboarding` memerlukan pelayan tempatan pada port 3001 dengan database ujian berasingan dan akaun demo. Ia menguji upload Excel, import, rollback import pendua, login default, tukar password wajib, reset admin dan pembatalan sesi lama. Jangan gunakan database rekod sebenar untuk ujian ini.
+
+## Naik taraf12 Oktober2026
+
+Akaun wakil baharu/reset kini memerlukan kod pengaktifan sah7 hari daripada AJK, selain password mykhairat. Kod dipaparkan sekali pada hasil import / Accounts dan boleh dijana semula. Family ID / ID Ahli, status dan bulan per keluarga boleh dipetakan. Import transaksi sejarah tersedia berasingan dengan preview jumlah dan pengesahan sumber. Wakil tidak wajib menggunakan portal; aliran resit WhatsApp kekal utama. Baca OPERATIONS.md sebelum mengesahkan sejarah atau cutover.

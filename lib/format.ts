@@ -1,17 +1,31 @@
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+import { malaysiaDate } from "./dates";
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "Mei",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 const MONTHS_LONG = [
-  "January",
-  "February",
-  "March",
+  "Januari",
+  "Februari",
+  "Mac",
   "April",
   "May",
-  "June",
-  "July",
-  "August",
+  "Jun",
+  "Julai",
+  "Ogos",
   "September",
-  "October",
+  "Oktober",
   "November",
-  "December",
+  "Disember",
 ];
 
 export function formatRM(value: number) {
@@ -35,12 +49,15 @@ export function formatDate(value: string) {
   const iso = value.length === 10 ? `${value}T00:00:00` : value;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-MY", { day: "numeric", month: "short", year: "numeric" });
+  return date.toLocaleDateString("en-MY", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export function todayDate() {
-  const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  return malaysiaDate();
 }
 
 export function nowIso() {
@@ -48,11 +65,16 @@ export function nowIso() {
 }
 
 export function currentYear() {
-  return new Date().getFullYear();
+  return Number(malaysiaDate().slice(0, 4));
 }
 
 export function familyStatusLabel(status: string) {
   if (status === "Suspended") return "Suspended";
   if (status === "Inactive") return "Inactive";
   return "Active";
+}
+
+export function reportYear(value?: string) {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1900 && n <= 2099 ? n : currentYear();
 }

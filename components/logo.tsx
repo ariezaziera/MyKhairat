@@ -1,7 +1,17 @@
-export function Logo({ compact = false, inverse = false }: { compact?: boolean; inverse?: boolean }) {
+export function Logo({
+  compact = false,
+  inverse = false,
+}: {
+  compact?: boolean;
+  inverse?: boolean;
+}) {
   return (
     <div className="flex items-center gap-3">
-      <svg viewBox="0 0 72 72" className={compact ? "h-10 w-10" : "h-14 w-14"} aria-hidden="true">
+      <svg
+        viewBox="0 0 72 72"
+        className={compact ? "h-10 w-10" : "h-14 w-14"}
+        aria-hidden="true"
+      >
         <defs>
           <linearGradient id="mk-blue" x1="12" y1="8" x2="60" y2="64">
             <stop stopColor="#4DA3FF" />
@@ -26,7 +36,10 @@ export function Logo({ compact = false, inverse = false }: { compact?: boolean; 
           strokeLinejoin="round"
           fill="none"
         />
-        <path d="M43 20c4.5 1.2 8 4.6 9.2 9.2-3.4-1.2-6.4-3.6-9.2-9.2z" fill="url(#mk-blue)" />
+        <path
+          d="M43 20c4.5 1.2 8 4.6 9.2 9.2-3.4-1.2-6.4-3.6-9.2-9.2z"
+          fill="url(#mk-blue)"
+        />
         <path
           d="M50 15.2l1.5 3.2 3.5.4-2.6 2.4.7 3.4L50 22.8l-3.1 1.8.7-3.4-2.6-2.4 3.5-.4 1.5-3.2z"
           fill="url(#mk-green)"
@@ -35,9 +48,17 @@ export function Logo({ compact = false, inverse = false }: { compact?: boolean; 
       <div>
         <div className="text-xl font-semibold leading-none tracking-tight">
           <span className={inverse ? "text-white" : "text-brand-blue"}>My</span>
-          <span className={inverse ? "text-emerald-200" : "text-brand-green"}>Khairat</span>
+          <span className={inverse ? "text-emerald-200" : "text-brand-green"}>
+            Khairat
+          </span>
         </div>
-        {!compact ? <p className={`mt-1 text-xs ${inverse ? "text-white/70" : "text-slate-500"}`}>Sistem Dana Kita</p> : null}
+        {!compact ? (
+          <p
+            className={`mt-1 text-xs ${inverse ? "text-white/70" : "text-slate-500"}`}
+          >
+            Sistem Dana Kita
+          </p>
+        ) : null}
       </div>
     </div>
   );

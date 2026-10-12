@@ -3,7 +3,7 @@ import { syncAllFamilies } from "@/lib/queries";
 
 export async function POST() {
   try {
-    await requireAdmin();
+    await requireAdmin("families");
     const families = await syncAllFamilies();
     return json({ updated: families.length });
   } catch (error) {

@@ -1,4 +1,10 @@
-import { errorResponse, json, requireAdmin, requireSession, assertFamily } from "@/lib/guard";
+import {
+  errorResponse,
+  json,
+  requireAdmin,
+  requireSession,
+  assertFamily,
+} from "@/lib/guard";
 import { deleteFamily, getFamilyBundle, updateFamily } from "@/lib/queries";
 import { familyUpdateSchema } from "@/lib/validators";
 
@@ -17,15 +23,25 @@ export async function GET(_request: Request, context: Context) {
 
 export async function PUT(request: Request, context: Context) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin("families");
     const { id } = await context.params;
-    const parsed = familyUpdateSchema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) return json({ error: parsed.error.issues[0]?.message ?? "Invalid family." }, 400);
-    const bundle = await updateFamily(id, {
-      ...parsed.data,
-      password: parsed.data.password || undefined,
-      notes: parsed.data.notes || undefined,
-    });
+    const parsed = familyUpdateSchema.safeParse(
+      await request.json().catch(() => null),
+    );
+    if (!parsed.success)
+      return json(
+        { error: parsed.error.issues[0]?.message ?? "Invalid family." },
+        400,
+      );
+    const bundle = await updateFamily(
+      id,
+      {
+        ...parsed.data,
+        password: parsed.data.password || undefined,
+        notes: parsed.data.notes || undefined,
+      },
+      session,
+    );
     return json(bundle);
   } catch (error) {
     return errorResponse(error);
@@ -34,9 +50,9 @@ export async function PUT(request: Request, context: Context) {
 
 export async function DELETE(_request: Request, context: Context) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin("families");
     const { id } = await context.params;
-    return json(await deleteFamily(id));
+    return json(await deleteFamily(id, session));
   } catch (error) {
     return errorResponse(error);
   }

@@ -9,7 +9,9 @@ export async function GET(request: Request, context: Context) {
     const session = await requireSession();
     const { familyId } = await context.params;
     assertFamily(session, familyId);
-    const year = Number(new URL(request.url).searchParams.get("year") || new Date().getFullYear());
+    const year = Number(
+      new URL(request.url).searchParams.get("year") || new Date().getFullYear(),
+    );
     const statement = await getStatement(familyId, year);
     const bytes = await statementPdf(statement);
     return pdfResponse(bytes, `mykhairat-statement-${familyId}-${year}.pdf`);

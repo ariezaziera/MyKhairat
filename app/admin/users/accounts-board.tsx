@@ -1,10 +1,9 @@
 "use client";
-
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useState, type FormEvent } from "react";
+import { api } from "@/lib/client-api";
 import { PasswordInput } from "@/components/password-input";
 import { Button, Card } from "@/components/ui";
-
 export type AccountRow = {
   id: string;
   email: string;
@@ -16,146 +15,293 @@ export type AccountRow = {
   familyLabel: string | null;
   phone: string | null;
   active: boolean;
+  accessProfile?: string;
+  activationRequired?: boolean;
 };
-
-export function AccountsBoard({ accounts, currentUserId }: { accounts: AccountRow[]; currentUserId: string }) {
+const profiles = {
+  owner: "Pentadbir utama",
+  treasurer: "Bendahari (rekod keluarga / resit)",
+  approver: "Pelulus (bayaran / tuntutan)",
+  auditor: "Auditor (lihat sahaja)",
+};
+export function AccountsBoard({
+  accounts,
+  currentUserId,
+}: {
+  accounts: AccountRow[];
+  currentUserId: string;
+}) {
   const router = useRouter();
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [pending, setPending] = useState(false);
-
-  async function createAdmin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPending(true);
+  const [error, setError] = useState(""),
+    [notice, setNotice] = useState(""),
+    [code, setCode] = useState(""),
+    [busy, setBusy] = useState(false),
+    [delegate, setDelegate] = useState(false);
+  const families = [
+    ...new Map(
+      accounts
+        .filter((a) => a.familyId)
+        .map((a) => [
+          a.familyId!,
+          { id: a.familyId!, name: a.familyLabel || a.name },
+        ]),
+    ).values(),
+  ];
+  async function patch(id: string, body: Record<string, unknown>) {
+    setBusy(true);
     setError("");
-    setNotice("");
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const response = await fetch("/api/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: form.get("name"),
-        email: form.get("email"),
-        password: form.get("password"),
-        phone: form.get("phone"),
-      }),
-    });
-    const data = await response.json().catch(() => ({}));
-    setPending(false);
-    if (!response.ok) {
-      setError(data.error || "Could not create the admin.");
-      return;
+    setCode("");
+    try {
+      const result = await api<{ activationCode?: string }>(
+        "/api/users/" + id,
+        "PATCH",
+        body,
+      );
+      setCode(result.activationCode || "");
+      setNotice(
+        "Akaun dikemaskini. Sesi lama dibatalkan jika akses atau password berubah.",
+      );
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sambungan gagal.");
+    } finally {
+      setBusy(false);
     }
-    formElement.reset();
-    setNotice("Admin account created.");
-    router.refresh();
   }
-
-  async function patch(id: string, body: Record<string, unknown>, message: string) {
+  async function create(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
     setError("");
-    setNotice("");
-    const response = await fetch(`/api/users/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      setError(data.error || "Could not update the account.");
-      return;
+    const form = e.currentTarget,
+      f = new FormData(form);
+    try {
+      const r = await api<{ activationCode?: string }>("/api/users", "POST", {
+        name: f.get("name"),
+        email: f.get("email") || "",
+        password: delegate ? "mykhairat" : f.get("password"),
+        phone: f.get("phone") || "",
+        accessProfile: f.get("profile") || "treasurer",
+        delegateFamilyId: delegate ? f.get("family") : undefined,
+      });
+      setCode(r.activationCode || "");
+      setNotice("Akaun disediakan. Password perlu ditukar pada login pertama.");
+      form.reset();
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sambungan gagal.");
+    } finally {
+      setBusy(false);
     }
-    setNotice(message);
-    router.refresh();
   }
-
   return (
     <div className="space-y-6">
-      {error ? <p className="rounded-2xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
-      {notice ? <p className="rounded-2xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{notice}</p> : null}
+      {error && (
+        <p role="alert" className="rounded-xl bg-rose-50 p-4 text-rose-800">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p role="status" className="rounded-xl bg-green-50 p-4 text-green-900">
+          {notice}
+        </p>
+      )}
+      {code && (
+        <Card>
+          <p className="font-semibold">Kod pengaktifan baharu</p>
+          <p className="mt-3 select-all font-mono text-2xl tracking-widest">
+            {code}
+          </p>
+          <p className="mt-3 text-slate-600">
+            Berikan hanya kepada wakil sebenar melalui WhatsApp / panggilan. Sah
+            7 hari. Password awal: mykhairat. Kod tidak disimpan sebagai teks
+            biasa.
+          </p>
+        </Card>
+      )}
       <Card>
-        <h2 className="text-lg font-semibold">Add AJK admin</h2>
-        <p className="mt-1 text-sm text-slate-500">Extra admins can approve payments, edit families, and manage this QR and the fund settings.</p>
-        <form onSubmit={createAdmin} className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="name">Name</label>
-            <input id="name" name="name" required minLength={2} />
-          </div>
-          <div>
-            <label htmlFor="email">Email</label>
-            <input id="email" name="email" type="email" required />
-          </div>
-          <div>
-            <label htmlFor="phone">Phone</label>
-            <input id="phone" name="phone" />
-          </div>
-          <div>
-            <label htmlFor="password">Temporary password</label>
-            <PasswordInput id="password" name="password" type="password" required minLength={6} />
-          </div>
-          <Button type="submit" className="sm:col-span-2 sm:w-fit" disabled={pending}>
-            {pending ? "Creating..." : "Create admin"}
+        <h2 className="text-xl font-semibold">
+          Tambah akses AJK / wakil ganti
+        </h2>
+        <label className="mt-5 flex items-center gap-3">
+          <input
+            className="!w-5 !p-0"
+            type="checkbox"
+            checked={delegate}
+            onChange={(e) => setDelegate(e.target.checked)}
+          />
+          Akaun ini untuk ahli keluarga yang membantu wakil
+        </label>
+        <form onSubmit={create} className="mt-5 grid gap-4 sm:grid-cols-2">
+          <label>
+            Nama
+            <input name="name" required minLength={2} />
+          </label>
+          <label>
+            Email {delegate ? "(pilihan)" : ""}
+            <input name="email" type="email" required={!delegate} />
+          </label>
+          <label>
+            Telefon
+            <input name="phone" type="tel" />
+          </label>
+          {delegate ? (
+            <label>
+              Keluarga
+              <select name="family" required>
+                <option value="">Pilih keluarga</option>
+                {families.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.id} · {f.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <>
+              <label>
+                Password sementara
+                <PasswordInput
+                  name="password"
+                  required
+                  minLength={8}
+                  maxLength={80}
+                />
+              </label>
+              <label>
+                Kuasa AJK
+                <select name="profile" defaultValue="treasurer">
+                  {Object.entries(profiles).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          )}
+          <Button disabled={busy} className="sm:w-fit">
+            {busy ? "Menyimpan…" : "Cipta akses"}
           </Button>
         </form>
       </Card>
-      <div className="grid gap-3 lg:grid-cols-2">
-        {accounts.map((account) => (
-          <Card key={account.id} className="space-y-3">
-            <div className="flex items-start justify-between gap-3">
+      <div className="grid gap-4 xl:grid-cols-2">
+        {accounts.map((a) => (
+          <Card key={a.id}>
+            <div className="flex flex-wrap justify-between gap-3">
               <div>
-                <p className="font-semibold">{account.name}</p>
-                <p className="text-sm font-semibold text-brand-blue">Username: {account.username ?? account.email}</p>
-                {account.mustChangePassword && <p className="text-xs text-amber-700">Wajib tukar password pada login berikutnya</p>}
-                {!account.email.endsWith("@wakil.invalid") && <p className="text-sm text-slate-500">{account.email}</p>}
-                <p className="mt-1 text-xs uppercase tracking-wide text-slate-400">
-                  {account.role === "admin" ? "AJK admin" : `Wakil · ${account.familyId}`}
-                  {account.familyLabel ? ` · ${account.familyLabel}` : ""}
+                <h2 className="text-xl font-semibold">{a.name}</h2>
+                <p className="mt-2 font-semibold text-blue-800">
+                  {a.username || a.email}
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  {a.role === "admin"
+                    ? profiles[a.accessProfile as keyof typeof profiles] ||
+                      "AJK"
+                    : `Wakil / ganti · ${a.familyId}`}
                 </p>
               </div>
-              <span className={`rounded-full px-2 py-1 text-xs font-semibold ${account.active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                {account.active ? "Active login" : "Disabled"}
+              <span className={a.active ? "text-green-800" : "text-slate-600"}>
+                {a.active ? "Akses aktif" : "Dinyahaktifkan"}
               </span>
             </div>
+            {a.mustChangePassword && (
+              <p className="mt-4 text-sm text-amber-900">
+                Wajib tukar password semasa login berikutnya.
+              </p>
+            )}
+            {a.activationRequired && (
+              <p className="mt-2 text-sm text-blue-800">
+                Kod pengaktifan diperlukan.
+              </p>
+            )}
             <form
-              className="grid gap-3 sm:grid-cols-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const formElement = event.currentTarget;
-                const form = new FormData(formElement);
-                const password = String(form.get("password") ?? "");
-                const name = String(form.get("name") ?? "");
-                void patch(
-                  account.id,
-                  { name, password: password || undefined },
-                  password ? "Password updated." : "Name updated.",
-                );
+              className="mt-5 grid gap-3 sm:grid-cols-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const f = new FormData(e.currentTarget);
+                void patch(a.id, {
+                  name: f.get("name"),
+                  password: f.get("password") || undefined,
+                  accessProfile:
+                    a.role === "admin" && a.id !== currentUserId
+                      ? f.get("profile")
+                      : undefined,
+                });
               }}
             >
-              <input name="name" defaultValue={account.name} required minLength={2} aria-label="Name" />
-              {account.role === "admin" && <PasswordInput name="password" minLength={6} placeholder="New password" aria-label="New password" />}
-              <Button type="submit" variant="ghost" className="sm:col-span-2 sm:w-fit">
-                {account.role === "admin" ? "Save name or password" : "Simpan nama"}
+              <label>
+                Nama
+                <input
+                  name="name"
+                  defaultValue={a.name}
+                  required
+                  minLength={2}
+                />
+              </label>
+              {a.role === "admin" && (
+                <>
+                  <label>
+                    Kuasa
+                    <select
+                      name="profile"
+                      defaultValue={a.accessProfile || "owner"}
+                      disabled={a.id === currentUserId}
+                    >
+                      {Object.entries(profiles).map(([k, v]) => (
+                        <option key={k} value={k}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Password baharu (pilihan)
+                    <PasswordInput name="password" minLength={8} />
+                  </label>
+                </>
+              )}
+              <Button variant="ghost" disabled={busy}>
+                Simpan akaun
               </Button>
             </form>
-            {account.role === "wakil" && <Button type="button" variant="ghost" onClick={() => { if (confirm(`Reset password ${account.name} kepada mykhairat?`)) void patch(account.id, { resetDefault: true }, "Password direset kepada mykhairat. Wakil wajib tukar selepas login."); }}>Reset password ke mykhairat</Button>}
-            {account.id === currentUserId ? (
-              <p className="text-xs text-slate-500">This is your login. Another admin must disable it.</p>
-            ) : (
-              <Button
-                type="button"
-                variant={account.active ? "danger" : "green"}
-                className="w-full sm:w-fit"
-                onClick={() =>
-                  void patch(
-                    account.id,
-                    { active: !account.active },
-                    account.active ? "Login disabled." : "Login enabled.",
-                  )
-                }
-              >
-                {account.active ? "Disable login" : "Enable login"}
-              </Button>
-            )}
+            <div className="mt-5 flex flex-wrap gap-3">
+              {a.role === "wakil" && (
+                <>
+                  <Button
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() => void patch(a.id, { issueActivation: true })}
+                  >
+                    Kod pengaktifan baharu
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() => {
+                      if (
+                        confirm(
+                          "Reset " +
+                            a.name +
+                            " kepada mykhairat dan batalkan sesi?",
+                        )
+                      )
+                        void patch(a.id, { resetDefault: true });
+                    }}
+                  >
+                    Reset password
+                  </Button>
+                </>
+              )}
+              {a.id !== currentUserId && (
+                <Button
+                  variant={a.active ? "danger" : "green"}
+                  disabled={busy}
+                  onClick={() => void patch(a.id, { active: !a.active })}
+                >
+                  {a.active ? "Nyahaktifkan" : "Aktifkan akses"}
+                </Button>
+              )}
+            </div>
           </Card>
         ))}
       </div>

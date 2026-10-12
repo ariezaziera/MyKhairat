@@ -1,5 +1,11 @@
 import { cookies } from "next/headers";
-import { COOKIE_NAME, cookieOptions, signSession, verifySession, type Session } from "./auth-token";
+import {
+  COOKIE_NAME,
+  cookieOptions,
+  signSession,
+  verifySession,
+  type Session,
+} from "./auth-token";
 
 export async function getSession(): Promise<Session | null> {
   const jar = await cookies();

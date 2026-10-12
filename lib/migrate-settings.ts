@@ -11,8 +11,11 @@ export async function migrateLegacySettings(client: Client) {
       return;
     }
     const source = await transaction.execute("SELECT * FROM settings");
-    const normalize = (key: string) => key.replace(/[^a-z0-9]/gi, "").toLowerCase();
-    const values = new Map(source.rows.map((row) => [normalize(String(row.key)), String(row.value)]));
+    const normalize = (key: string) =>
+      key.replace(/[^a-z0-9]/gi, "").toLowerCase();
+    const values = new Map(
+      source.rows.map((row) => [normalize(String(row.key)), String(row.value)]),
+    );
     const read = (keys: string[], fallback: string) => {
       for (const key of keys) {
         const value = values.get(normalize(key));
@@ -25,8 +28,13 @@ export async function migrateLegacySettings(client: Client) {
       return Number.isFinite(value) && value > 0 ? value : fallback;
     };
     const latest = [...source.rows].reverse();
-    const column = (name: string) => latest.find((row) => row[name] !== null && row[name] !== undefined)?.[name] ?? null;
-    await transaction.execute("ALTER TABLE settings RENAME TO settings_legacy_backup");
+    const column = (name: string) =>
+      latest.find((row) => row[name] !== null && row[name] !== undefined)?.[
+        name
+      ] ?? null;
+    await transaction.execute(
+      "ALTER TABLE settings RENAME TO settings_legacy_backup",
+    );
     await transaction.execute(`CREATE TABLE settings (
       id INTEGER PRIMARY KEY, base_rate_per_member REAL NOT NULL,
       payment_due_day INTEGER NOT NULL, payment_method TEXT NOT NULL,
@@ -40,14 +48,26 @@ export async function migrateLegacySettings(client: Client) {
       sql: `INSERT INTO settings VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         number(["base_rate_per_member", "monthly_rate", "rate_per_head"], 5),
-        Math.min(28, Math.max(1, Math.floor(number(["payment_due_day", "due_day"], 7)))),
+        Math.min(
+          28,
+          Math.max(1, Math.floor(number(["payment_due_day", "due_day"], 7))),
+        ),
         read(["payment_method"], "DuitNow QR / Bank Transfer"),
-        read(["bank_name"], ""), read(["bank_account_number", "account_number"], ""),
-        read(["bank_account_name", "account_name"], ""), new Date().toISOString(),
+        read(["bank_name"], ""),
+        read(["bank_account_number", "account_number"], ""),
+        read(["bank_account_name", "account_name"], ""),
+        new Date().toISOString(),
         read(["duitnow_id"], String(column("duitnow_id") ?? "")),
-        column("duitnow_content_type"), column("duitnow_qr"),
-        number(["death_payout_amount"], Number(column("death_payout_amount") ?? 2000)),
-        number(["warded_payout_amount"], Number(column("warded_payout_amount") ?? 200)),
+        column("duitnow_content_type"),
+        column("duitnow_qr"),
+        number(
+          ["death_payout_amount"],
+          Number(column("death_payout_amount") ?? 2000),
+        ),
+        number(
+          ["warded_payout_amount"],
+          Number(column("warded_payout_amount") ?? 200),
+        ),
       ],
     });
     await transaction.commit();

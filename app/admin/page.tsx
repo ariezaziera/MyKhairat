@@ -1,71 +1,158 @@
 import Link from "next/link";
-import { StatusPill } from "@/components/status-pill";
-import { Card, Stat } from "@/components/ui";
-import { formatMonth, formatRM } from "@/lib/format";
 import { getAdminDashboard, getSettings } from "@/lib/queries";
-
-export default async function AdminDashboardPage() {
-  const dashboard = await getAdminDashboard();
-  const settings = await getSettings();
+import { requireAdminPage } from "@/lib/page-auth";
+import { can } from "@/lib/permissions";
+import { formatRM, formatMonth } from "@/lib/format";
+import { PageHeading } from "@/components/page-heading";
+import { FamilyScene } from "@/components/family-scene";
+import { Card, Stat, Alert } from "@/components/ui";
+import { EmptyState } from "@/components/empty-state";
+export default async function AdminPage() {
+  const session = await requireAdminPage(),
+    d = await getAdminDashboard(),
+    settings = await getSettings();
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-slate-500">Pending payments, fund balance, and families that need attention.</p>
-      </div>
-      {!settings.hasDuitnowQr ? (
-        <Link href="/admin/duitnow" className="block rounded-3xl bg-blue-50 px-4 py-3 text-sm font-semibold text-brand-blue">
-          Upload the DuitNow QR so families can scan it when they pay.
-        </Link>
-      ) : null}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Pending approvals" value={String(dashboard.pendingCount)} hint="Log Masuk Duit waiting for review" />
-        <Stat label="Total fund balance" value={formatRM(dashboard.totalFundBalance)} hint="Approved collections minus payouts" />
-        <Stat label="Families overdue" value={String(dashboard.overdueFamilies)} />
-        <Stat label="Suspended" value={String(dashboard.suspendedFamilies)} hint={`${dashboard.activeFamilies} active of ${dashboard.families}`} />
-      </div>
-      <Card>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Pending Approvals</h2>
-          <Link href="/admin/approvals" className="text-sm font-semibold text-brand-blue">
-            View all
-          </Link>
+    <div className="space-y-6">
+      <PageHeading
+        eyebrow="Ruang kerja AJK"
+        title="Amanah keluarga, dalam satu tempat"
+        description="Rekod resit yang diterima melalui WhatsApp. Semak bayaran dan pastikan bantuan sampai kepada keluarga."
+      />
+      <div className="hero-panel grid items-center gap-4 lg:grid-cols-[1.5fr_1fr]">
+        <div className="relative z-10">
+          <p className="eyebrow">Kerja hari ini</p>
+          <h2 className="text-3xl font-semibold">
+            {d.pendingCount
+              ? `${d.pendingCount} resit menunggu semakan`
+              : "Semakan resit terkini selesai"}
+          </h2>
+          <p className="mt-3 max-w-lg leading-8 text-slate-600">
+            Portal wakil ialah pilihan. AJK boleh mengurus rekod keluarga
+            daripada resit WhatsApp tanpa meminta wakil login.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            {can(session.accessProfile, "payments") && (
+              <Link href="/admin/payments/new" className="action-link">
+                Rekod resit WhatsApp
+              </Link>
+            )}
+            <Link href="/admin/approvals" className="secondary-link">
+              Semak resit
+            </Link>
+          </div>
         </div>
-        {dashboard.pending.length === 0 ? <p className="text-sm text-slate-500">No payments are waiting.</p> : null}
-        <ul className="divide-y divide-slate-100">
-          {dashboard.pending.map((payment) => (
-            <li key={payment.paymentId} className="flex items-center justify-between gap-3 py-3">
-              <div>
-                <p className="font-semibold">
-                  {payment.familyId} · {payment.wakilName}
-                </p>
-                <p className="text-sm text-slate-500">
-                  {formatMonth(payment.paymentMonthYear)} · {formatRM(payment.amountPaid)}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <StatusPill status={payment.approvalStatus} />
-                <Link href={`/admin/approvals/${payment.paymentId}`} className="text-sm font-semibold text-brand-blue">
-                  Review
-                </Link>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </Card>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Link href="/admin/requests" className="rounded-3xl bg-white p-4 shadow-card ring-1 ring-slate-200">
-          <p className="text-sm text-slate-500">Member requests</p>
-          <p className="mt-1 text-2xl font-semibold">{dashboard.requestCount}</p>
-        </Link>
-        <Link href="/admin/reports" className="rounded-3xl bg-white p-4 shadow-card ring-1 ring-slate-200">
-          <p className="text-sm text-slate-500">Collected this year</p>
-          <p className="mt-1 text-2xl font-semibold">{formatRM(dashboard.yearCollected)}</p>
-        </Link>
-        <Link href="/admin/arrears" className="rounded-3xl bg-white p-4 shadow-card ring-1 ring-slate-200">
-          <p className="text-sm text-slate-500">Expected this year</p>
-          <p className="mt-1 text-2xl font-semibold">{formatRM(dashboard.yearExpected)}</p>
-        </Link>
+        <FamilyScene compact />
+      </div>
+      {!settings.hasDuitnowQr && can(session.accessProfile, "settings") && (
+        <Alert>
+          <Link href="/admin/duitnow" className="font-semibold underline">
+            Tetapkan QR DuitNow
+          </Link>{" "}
+          supaya wakil boleh menyimpan atau mengimbasnya.
+        </Alert>
+      )}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat
+          label="Baki buku dana"
+          value={formatRM(d.totalFundBalance)}
+          hint="Padankan dengan ledger & penyata bank"
+        />
+        <Stat
+          label="Resit belum disemak"
+          value={String(d.pendingCount)}
+          hint="Kutipan belum disahkan"
+        />
+        <Stat label="Keluarga tertunggak" value={String(d.overdueFamilies)} />
+        <Stat
+          label="Keluarga aktif"
+          value={`${d.activeFamilies} / ${d.families}`}
+          hint={`${d.suspendedFamilies} digantung`}
+        />
+      </div>
+      <div className="grid items-start gap-5 xl:grid-cols-[1.4fr_1fr]">
+        <Card>
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-xl font-semibold">Resit untuk disemak</h2>
+            <Link
+              className="font-semibold text-blue-800"
+              href="/admin/approvals"
+            >
+              Lihat semua →
+            </Link>
+          </div>
+          {!d.pending.length ? (
+            <EmptyState
+              title="Tiada resit menunggu"
+              description="Resit baharu akan muncul di sini selepas direkod oleh AJK atau wakil."
+            />
+          ) : (
+            <ul className="divide-y divide-slate-200">
+              {d.pending.map((p) => (
+                <li
+                  key={p.paymentId}
+                  className="flex flex-wrap items-center justify-between gap-3 py-4"
+                >
+                  <div className="min-w-0">
+                    <p className="break-words font-semibold">
+                      {p.wakilName} · {p.familyId}
+                    </p>
+                    <p className="mt-2 text-slate-600">
+                      {formatMonth(p.paymentMonthYear)} ·{" "}
+                      {formatRM(p.amountPaid)}
+                    </p>
+                  </div>
+                  <Link
+                    className="secondary-link"
+                    href={"/admin/approvals/" + p.paymentId}
+                  >
+                    Semak
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+        <div className="space-y-4">
+          <Card>
+            <h2 className="text-xl font-semibold">Keluarga & bantuan</h2>
+            <div className="mt-5 space-y-3">
+              <Link
+                className="secondary-link w-full justify-between"
+                href="/admin/requests"
+              >
+                Permohonan ahli <strong>{d.requestCount}</strong>
+              </Link>
+              <Link
+                className="secondary-link w-full justify-between"
+                href="/admin/claims"
+              >
+                Tuntutan bantuan <span>→</span>
+              </Link>
+              <Link
+                className="secondary-link w-full justify-between"
+                href="/admin/fund"
+              >
+                Ledger & semakan bank <span>→</span>
+              </Link>
+            </div>
+          </Card>
+          <Card>
+            <p className="eyebrow">Caruman tahun ini</p>
+            <p className="text-3xl font-semibold">
+              {formatRM(d.yearCollected)}
+            </p>
+            <p className="mt-3 text-slate-600">
+              Jangkaan {formatRM(d.yearExpected)}. Kiraan sejarah belum disahkan
+              perlu disemak dengan rekod asal.
+            </p>
+            <Link
+              className="mt-4 inline-block font-semibold text-blue-800"
+              href="/admin/reports"
+            >
+              Buka laporan →
+            </Link>
+          </Card>
+        </div>
       </div>
     </div>
   );

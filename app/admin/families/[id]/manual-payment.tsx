@@ -1,12 +1,11 @@
 "use client";
-
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Button, Card } from "@/components/ui";
-import { formatMonth, todayDate } from "@/lib/format";
-
+import { api, uploadEvidence } from "@/lib/client-api";
+import { formatMonth, todayDate, formatRM } from "@/lib/format";
+import { useAdminPermission } from "@/components/admin-permissions";
 type MonthOption = { month: string; state: string; outstanding: number };
-
 export function ManualPayment({
   familyId,
   months,
@@ -16,83 +15,168 @@ export function ManualPayment({
   months: MonthOption[];
   suggested: number;
 }) {
-  const router = useRouter();
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [pending, setPending] = useState(false);
-  const payable = months.filter((item) => item.state !== "Upcoming");
-
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPending(true);
+  const router = useRouter(),
+    approve = useAdminPermission("approve");
+  const payable = months.filter(
+    (m) => m.outstanding > 0 && !["Upcoming", "Pending"].includes(m.state),
+  );
+  const [month, setMonth] = useState(payable[0]?.month || ""),
+    [amount, setAmount] = useState(
+      String(payable[0]?.outstanding ?? suggested),
+    ),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState(""),
+    [busy, setBusy] = useState(false);
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
     setError("");
     setNotice("");
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const response = await fetch("/api/payments/manual", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        familyId,
-        paymentMonthYear: form.get("paymentMonthYear"),
-        amountPaid: Number(form.get("amountPaid")),
-        transactionReference: form.get("transactionReference"),
-        paymentDate: form.get("paymentDate"),
-        markApproved: form.get("markApproved") === "on",
-        entryNote: form.get("entryNote"),
-      }),
-    });
-    const data = await response.json().catch(() => ({}));
-    setPending(false);
-    if (!response.ok) {
-      setError(data.error || "Could not record the payment.");
-      return;
+    const f = new FormData(e.currentTarget);
+    try {
+      const file = f.get("receipt");
+      const receipt =
+        file instanceof File && file.size
+          ? await uploadEvidence(familyId, file)
+          : null;
+      const result = await api<{ approvalStatus: string }>(
+        "/api/payments/manual",
+        "POST",
+        {
+          familyId,
+          paymentMonthYear: month,
+          amountPaid: Number(amount),
+          transactionReference: f.get("reference"),
+          paymentDate: f.get("date"),
+          markApproved: approve && f.get("approved") === "on",
+          entryNote: f.get("note"),
+          receiptId: receipt?.receiptId,
+        },
+      );
+      setNotice(
+        result.approvalStatus === "Approved"
+          ? "Bayaran direkod dan disahkan."
+          : "Resit direkod; menunggu semakan AJK.",
+      );
+      router.refresh();
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Sambungan gagal. Semak rekod sebelum cuba semula.",
+      );
+    } finally {
+      setBusy(false);
     }
-    formElement.reset();
-    setNotice(data.approvalStatus === "Approved" ? "Payment recorded and approved. Baki semasa has been recalculated." : "Payment recorded as pending.");
-    router.refresh();
   }
-
   return (
     <Card>
-      <h2 className="text-lg font-semibold">Record a payment</h2>
-      <p className="mt-1 text-sm text-slate-500">Use this for cash, and for collections already made since 2025 before this system. Set the family’s joined month first, then record each old month as approved.</p>
-      <form onSubmit={onSubmit} className="mt-4 grid gap-4 sm:grid-cols-2">
-        {error ? <p className="rounded-2xl bg-rose-50 px-3 py-2 text-sm text-rose-700 sm:col-span-2">{error}</p> : null}
-        {notice ? <p className="rounded-2xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 sm:col-span-2">{notice}</p> : null}
-        <div>
-          <label htmlFor="paymentMonthYear">Month</label>
-          <select id="paymentMonthYear" name="paymentMonthYear" required defaultValue={payable[0]?.month}>
-            {payable.map((item) => (
-              <option key={item.month} value={item.month}>
-                {formatMonth(item.month)} · {item.state}
+      <h2 className="text-xl font-semibold">Resit WhatsApp / bayaran manual</h2>
+      <p className="mt-2 leading-7 text-slate-600">
+        Upload resit yang diterima daripada wakil. Tarikh ialah bila wang
+        diterima, bulan ialah caruman yang dibayar. Lebihan dikira sebagai
+        kredit untuk bulan tertunggak paling awal.
+      </p>
+      <form onSubmit={submit} className="mt-6 grid gap-4 sm:grid-cols-2">
+        {error && (
+          <p role="alert" className="text-rose-700 sm:col-span-2">
+            {error}
+          </p>
+        )}
+        {notice && (
+          <p role="status" className="text-green-800 sm:col-span-2">
+            {notice}
+          </p>
+        )}
+        <label>
+          Bulan caruman
+          <select
+            value={month}
+            onChange={(e) => {
+              setMonth(e.target.value);
+              setAmount(
+                String(
+                  payable.find((m) => m.month === e.target.value)
+                    ?.outstanding ?? 0,
+                ),
+              );
+            }}
+            required
+          >
+            <option value="">Pilih bulan</option>
+            {payable.map((m) => (
+              <option key={m.month} value={m.month}>
+                {formatMonth(m.month)} · Baki {formatRM(m.outstanding)}
               </option>
             ))}
           </select>
-        </div>
-        <div>
-          <label htmlFor="amountPaid">Amount</label>
-          <input id="amountPaid" name="amountPaid" inputMode="decimal" required defaultValue={suggested} />
-        </div>
-        <div>
-          <label htmlFor="paymentDate">Date received</label>
-          <input id="paymentDate" name="paymentDate" type="date" required defaultValue={todayDate()} />
-        </div>
-        <div>
-          <label htmlFor="transactionReference">Reference</label>
-          <input id="transactionReference" name="transactionReference" required minLength={2} placeholder="Cash, counter, or bank ref" />
-        </div>
-        <div className="sm:col-span-2">
-          <label htmlFor="entryNote">Note</label>
-          <input id="entryNote" name="entryNote" placeholder="Optional note for the ledger" />
-        </div>
-        <label className="flex items-center gap-2 text-sm font-medium sm:col-span-2">
-          <input name="markApproved" type="checkbox" defaultChecked className="!h-4 !w-4 !rounded !p-0" />
-          Approve immediately
         </label>
-        <Button type="submit" className="sm:col-span-2 sm:w-fit" disabled={pending || payable.length === 0}>
-          {pending ? "Saving..." : "Record payment"}
+        <label>
+          Jumlah diterima RM
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            required
+          />
+        </label>
+        <label>
+          Tarikh wang diterima
+          <input
+            name="date"
+            type="date"
+            max={todayDate()}
+            defaultValue={todayDate()}
+            required
+          />
+        </label>
+        <label>
+          Rujukan bank / resit tunai
+          <input
+            name="reference"
+            minLength={2}
+            maxLength={64}
+            required
+            placeholder="Rujukan unik transaksi"
+          />
+        </label>
+        <label className="sm:col-span-2">
+          Imej resit
+          <input
+            name="receipt"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+          />
+          <span className="mt-1 block text-sm text-slate-600">
+            PNG/JPG/WebP bawah 2MB. Bayaran tunai boleh direkod dengan rujukan
+            resit dan catatan.
+          </span>
+        </label>
+        <label className="sm:col-span-2">
+          Catatan / sumber
+          <input
+            name="note"
+            maxLength={300}
+            placeholder="Contoh: diterima di WhatsApp kumpulan keluarga"
+          />
+        </label>
+        {approve && (
+          <label className="flex items-center gap-3 sm:col-span-2">
+            <input name="approved" type="checkbox" className="!w-5 !p-0" />
+            Saya telah semak resit dan wang diterima. Sahkan sekarang.
+          </label>
+        )}
+        <Button disabled={busy || !month} className="sm:w-fit">
+          {busy ? "Menyimpan…" : "Simpan rekod bayaran"}
         </Button>
+        {!payable.length && (
+          <p className="text-slate-600 sm:col-span-2">
+            Tiada bulan berbaki. Semak pengesahan sejarah jika rekod lama belum
+            tepat.
+          </p>
+        )}
       </form>
     </Card>
   );
