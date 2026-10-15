@@ -17,6 +17,9 @@ const globalForDb = globalThis as unknown as {
 export function getClient() {
   if (!globalForDb.client) {
     const url = process.env.TURSO_DATABASE_URL || "file:local.db";
+    if (!url.startsWith("file:") && new URL(url).hostname.toLowerCase().includes("kagum")) {
+      throw new Error("MyKhairat mesti menggunakan database sendiri. Sambungan KagumOne ditolak.");
+    }
     const authToken = process.env.TURSO_AUTH_TOKEN;
     globalForDb.client = createClient(authToken ? { url, authToken } : { url });
   }
@@ -56,6 +59,13 @@ export function ensureSchema() {
   if (!ready) {
     ready = (async () => {
       const client = getClient();
+      // Check ownership before any schema migration, especially shared table names.
+      const foreignTables = await client.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('projects','people','equipment','task_assignees','content_production') LIMIT 1",
+      );
+      if (foreignTables.rows.length) {
+        throw new Error("Database mengandungi jadual aplikasi lain. Migrasi MyKhairat dihentikan sebelum sebarang perubahan.");
+      }
       await client.execute("PRAGMA foreign_keys = ON");
       await migrateLegacySettings(client);
       for (const statement of MIGRATION_STATEMENTS) {

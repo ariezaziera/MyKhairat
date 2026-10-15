@@ -104,6 +104,10 @@ FPX/payment gateway dan notifikasi WhatsApp automatik bukan sebahagian aliran ha
 
 ## Migrasi workbook lama
 
+### Pengasingan database
+
+MyKhairat menggunakan database Turso khusus `mykhairat-ariezaziera`. Database `kagumone-app-ariezaziera` bukan sasaran aplikasi ini. Semasa pengasingan, 19 jadual milik MyKhairat disalin bersama skema, indeks dan data; jadual organisasi KagumOne tidak dibawa. Eksport terenkripsi dan laporan pengesahan disimpan dalam `backups/` (diabaikan Git/Vercel). Data sumber tidak dipadam. Kekalkan AUTH_SECRET, DATA_ENCRYPTION_KEY dan BACKUP_PASSPHRASE MyKhairat ketika menukar sambungan. Aplikasi menolak hostname KagumOne dan jadual aplikasi lain sebelum menjalankan migrasi skema.
+
 `npx tsx scripts/import-legacy.ts <fail.xlsx>` hanya menghasilkan preview. Adapter ini khusus untuk struktur workbook yang telah diaudit; jumlah / baris yang berubah akan ditolak. `--apply --local` menggunakan `backups/legacy-rehearsal.db`; `--apply` tanpa `--local` menggunakan database dalam `.env.local`. Deploy kod semakan import dahulu sebelum import production.
 
 Sebelum perubahan, skrip menyimpan dan menguji backup terenkripsi dengan BACKUP_PASSPHRASE. Semua insert dan pembuangan keluarga ujian yang dibenarkan dibuat dalam satu transaksi. Hash sumber mencegah import berulang. Fail asal dan kod pengaktifan tidak masuk Git; salinan sumber terenkripsi juga disimpan dalam `legacy_imports`.
